@@ -1,0 +1,20 @@
+[package]
+name = "drcbot-rs"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.27.0", features = ["macros", "rt-multi-thread"] }
+mongodb = "2.4.0"
+serde = "1.0.159"
+serde_derive = "1.0.159"
+toml = "0.7.3"
+poise = "0.5.2"
+chrono = "0.4.24"
+itertools = "0.10.5"
+lazy_static = "1.4.0"
+regex = "1.7.3"
+songbird = {version = "0.3.1", features = ["yt-dlp", "builtin-queue"]}
+url = "2.3.1"
