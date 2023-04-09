@@ -8,7 +8,7 @@ use poise::{
 use songbird::{input::Restartable, Call, Songbird};
 use url::Url;
 
-use crate::{Context, Error};
+use crate::{Context, Error, MIME_AUDIO_REGEX};
 
 #[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
@@ -58,21 +58,22 @@ pub async fn play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
 #[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn play_attachment(ctx: Context<'_>, file: Attachment) -> Result<(), Error> {
     if let Some(content_type) = file.content_type {
-        if content_type == "audio" {
+        if MIME_AUDIO_REGEX.is_match(&content_type) {
             _play_url(
                 ctx,
                 Url::parse(&file.url).expect("this should be a valid url from discord"),
             )
-            .await?
+            .await?;
         } else {
             send_application_reply(ctx, |r| {
                 r.content("this isn't an audio file, make sure it is")
             })
             .await?;
         }
+    } else {
+        send_application_reply(ctx, |r| r.content("no content type found")).await?;
     }
 
-    send_application_reply(ctx, |r| r.content("no content type found")).await?;
     Ok(())
 }
 

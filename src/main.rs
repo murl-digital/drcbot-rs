@@ -27,6 +27,7 @@ pub struct Data {
 
 lazy_static! {
     pub static ref ID_REGEX: Regex = Regex::new(r"rr:(\d{18})").unwrap();
+    pub static ref MIME_AUDIO_REGEX: Regex = Regex::new(r"audio/.+").unwrap();
 }
 
 #[derive(Deserialize)]
