@@ -1,14 +1,24 @@
 use std::sync::Arc;
+use chrono::Utc;
 use tokio::sync::Mutex;
 
 use poise::{
     send_application_reply,
-    serenity_prelude::{Attachment, ChannelId, GuildId},
+    serenity_prelude::{Attachment, ChannelId, GuildId, TypeMapKey},
 };
-use songbird::{input::Restartable, Call, Songbird};
+use songbird::{input::Restartable, Songbird, Call};
 use url::Url;
 
 use crate::{Context, Error, MIME_AUDIO_REGEX};
+
+struct TrackRequester {
+    name: String,
+    avatar_url: String
+}
+
+impl TypeMapKey for TrackRequester {
+    type Value = TrackRequester;
+}
 
 #[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
@@ -42,6 +52,8 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
     {
         if let Some(current) = handler.queue().current() {
             let metadata = current.metadata();
+            let type_map = current.typemap().read().await;
+            let requester = type_map.get::<TrackRequester>();
             send_application_reply(ctx, |r| {
                 r.embed(|e| {
                     e.title("Now Playing:")
@@ -57,6 +69,15 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
                         ))
                         .field("Title", metadata.title.clone().unwrap_or("-".to_string()), true)
                         .field("Artist", metadata.artist.clone().unwrap_or("-".to_string()), true)
+                        .timestamp(Utc::now());
+
+                    if let Some(requester) = requester {
+                        e.footer(|f| {
+                            f.icon_url(requester.avatar_url.to_owned()).text(format!("Requested by {}", requester.name))
+                        });
+                    }
+
+                    e
                 })
             })
             .await?;
@@ -176,7 +197,21 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
         }
     };
 
-    handler.enqueue_source(source.into());
+    let handle = handler.enqueue_source(source.into());
+
+    let (name, avatar_url) = match ctx.author_member().await {
+        Some(member) => {
+            (member.display_name().into_owned(), member.face())
+        },
+        None => {
+            (ctx.author().name.clone(), ctx.author().face())
+        }
+    };
+
+    let mut  type_map = handle.typemap().write().await;
+    type_map.insert::<TrackRequester>(TrackRequester {
+        name, avatar_url
+    });
 
     send_application_reply(ctx, |r| r.content("your track has been queued now")).await?;
 
