@@ -50,7 +50,7 @@ async fn main() {
 
     let framework = Framework::builder()
         .token(config.token)
-        .intents(GatewayIntents::GUILD_VOICE_STATES)
+        .intents(GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES)
         .client_settings(|c| {
             c.register_songbird()
         })
