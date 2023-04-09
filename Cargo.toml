@@ -16,5 +16,5 @@ chrono = "0.4.24"
 itertools = "0.10.5"
 lazy_static = "1.4.0"
 regex = "1.7.3"
-songbird = {version = "0.3.1", features = ["yt-dlp", "builtin-queue"]}
+songbird = {version = "0.3.2", features = ["yt-dlp", "builtin-queue"]}
 url = "2.3.1"
