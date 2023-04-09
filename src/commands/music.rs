@@ -27,7 +27,7 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
         }
     };
 
-    ctx.defer_ephemeral().await?;
+    ctx.defer().await?;
 
     let manager = get_client(&ctx).await;
 
@@ -50,7 +50,7 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
-    ctx.defer_ephemeral().await?;
+    ctx.defer().await?;
 
     _play_url(ctx, url).await
 }
