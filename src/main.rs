@@ -1,6 +1,6 @@
 #![feature(is_some_and)]
 
-use commands::music::{play_attachment, play_url};
+use commands::music::{now_playing, play_attachment, play_url, skip};
 use lazy_static::lazy_static;
 use mongodb::Client;
 use poise::builtins::register_globally;
@@ -62,6 +62,8 @@ async fn main() {
                 add_message(),
                 play_url(),
                 play_attachment(),
+                skip(),
+                now_playing(),
             ],
             event_handler: |ctx, event, _framework, _data| {
                 Box::pin(async move {

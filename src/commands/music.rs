@@ -11,6 +11,64 @@ use url::Url;
 use crate::{Context, Error, MIME_AUDIO_REGEX};
 
 #[poise::command(slash_command, ephemeral, guild_only)]
+pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
+    let guild = ctx.guild().unwrap();
+    let channel = guild
+        .voice_states
+        .get(&ctx.author().id)
+        .and_then(|v| v.channel_id);
+
+    let current_channel = match channel {
+        Some(channel) => channel,
+        None => {
+            send_application_reply(ctx, |r| r.content("you're not in a vc lmao")).await?;
+
+            return Ok(());
+        }
+    };
+
+    ctx.defer().await?;
+
+    let manager = get_client(&ctx).await;
+
+    let handler_lock = manager.get(ctx.guild_id().unwrap()).unwrap();
+
+    let handler = handler_lock.lock().await;
+
+    // is_some_and should be stabilized soon
+    if handler
+        .current_channel()
+        .is_some_and(|c| c.0 == current_channel.0)
+    {
+        if let Some(current) = handler.queue().current() {
+            let metadata = current.metadata();
+            send_application_reply(ctx, |r| {
+                r.embed(|e| {
+                    e.title("Now Playing:")
+                        .thumbnail(
+                            metadata
+                                .thumbnail
+                                .clone()
+                                .unwrap_or("https://http.cat/404".to_string()),
+                        )
+                        .description(format!(
+                            "*{}*",
+                            metadata.source_url.clone().unwrap_or("https://http.cat/404".to_string())
+                        ))
+                        .field("Title", metadata.title.clone().unwrap_or("-".to_string()), true)
+                        .field("Artist", metadata.artist.clone().unwrap_or("-".to_string()), true)
+                })
+            })
+            .await?;
+        }
+    } else {
+        send_application_reply(ctx, |r| r.content("not in a vc with the bot")).await?;
+    }
+
+    Ok(())
+}
+
+#[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     let guild = ctx.guild().unwrap();
     let channel = guild
@@ -107,7 +165,7 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
         }
     };
 
-    let source = match Restartable::ytdl(url, true).await {
+    let source = match Restartable::ytdl(url, false).await {
         Ok(source) => source,
         Err(why) => {
             println!("problem starting source: {:?}", why);
