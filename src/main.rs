@@ -1,6 +1,6 @@
 #![feature(is_some_and)]
 
-use commands::music::{now_playing, play_attachment, play_url, skip};
+use commands::music::*;
 use lazy_static::lazy_static;
 use mongodb::Client;
 use poise::builtins::register_globally;
@@ -52,19 +52,9 @@ async fn main() {
     let framework = Framework::builder()
         .token(config.token)
         .intents(GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES)
-        .client_settings(|c| {
-            c.register_songbird()
-        })
+        .client_settings(|c| c.register_songbird())
         .options(FrameworkOptions {
-            commands: vec![
-                add_role(),
-                init(),
-                add_message(),
-                play_url(),
-                play_attachment(),
-                skip(),
-                now_playing(),
-            ],
+            commands: vec![add_role(), init(), add_message(), music()],
             event_handler: |ctx, event, _framework, _data| {
                 Box::pin(async move {
                     if let Event::InteractionCreate { interaction } = event {
