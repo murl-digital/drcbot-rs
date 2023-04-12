@@ -1,5 +1,3 @@
-#![feature(is_some_and)]
-
 use commands::{music::music, reaction_roles::reaction_roles};
 use lazy_static::lazy_static;
 use mongodb::Client;

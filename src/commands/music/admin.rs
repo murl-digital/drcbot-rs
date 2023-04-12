@@ -36,7 +36,6 @@ async fn force_skip(ctx: Context<'_>) -> Result<(), Error> {
 
     let handler = handler_lock.lock().await;
 
-    // is_some_and should be stabilized soon
     if handler
         .current_channel()
         .is_some_and(|c| c.0 == current_channel.0)

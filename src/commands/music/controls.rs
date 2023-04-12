@@ -32,7 +32,6 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
 
     let handler = handler_lock.lock().await;
 
-    // is_some_and should be stabilized soon
     if handler
         .current_channel()
         .is_some_and(|c| c.0 == current_channel.0)
@@ -113,7 +112,6 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
 
     let handler = handler_lock.lock().await;
 
-    // is_some_and should be stabilized soon
     if let Some(bot_channel) = handler.current_channel() {
         if bot_channel.0 == current_channel.0 {
             if let Some(current_track) = handler.queue().current() {
