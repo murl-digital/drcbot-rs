@@ -1,2 +1,2 @@
 pub mod music;
-pub mod reactionroles;
+pub mod reaction_roles;

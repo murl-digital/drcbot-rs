@@ -1,6 +1,6 @@
 #![feature(is_some_and)]
 
-use commands::music::*;
+use commands::{music::music, reaction_roles::reaction_roles};
 use lazy_static::lazy_static;
 use mongodb::Client;
 use poise::builtins::register_globally;
@@ -16,13 +16,12 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 mod commands;
 mod data;
 
-use commands::reactionroles::*;
 use regex::Regex;
 use songbird::SerenityInit;
 
 #[derive(Debug)]
 pub struct Data {
-    client: Arc<Client>,
+    pub client: Arc<Client>,
 }
 
 lazy_static! {
@@ -54,7 +53,7 @@ async fn main() {
         .intents(GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES)
         .client_settings(|c| c.register_songbird())
         .options(FrameworkOptions {
-            commands: vec![add_role(), init(), add_message(), music()],
+            commands: vec![reaction_roles(), music()],
             event_handler: |ctx, event, _framework, _data| {
                 Box::pin(async move {
                     if let Event::InteractionCreate { interaction } = event {
