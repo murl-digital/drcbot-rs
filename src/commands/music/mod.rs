@@ -13,9 +13,9 @@ use songbird::{Call, Songbird};
 
 use crate::{
     commands::music::{
+        admin::admin,
         controls::{now_playing, skip},
         playback::play,
-        admin::admin
     },
     Context, Error,
 };

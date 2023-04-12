@@ -2,7 +2,11 @@ use poise::send_application_reply;
 
 use crate::{commands::music::get_client, Context, Error};
 
-#[poise::command(slash_command, subcommands("force_skip"), required_permissions = "MANAGE_MESSAGES")]
+#[poise::command(
+    slash_command,
+    subcommands("force_skip"),
+    required_permissions = "MANAGE_MESSAGES"
+)]
 pub async fn admin(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
