@@ -17,6 +17,7 @@ struct RoleButton {
     slash_command,
     required_permissions = "MANAGE_MESSAGES",
     subcommands("messages", "roles"),
+    guild_only,
     rename = "reaction-roles"
 )]
 pub async fn reaction_roles(_: Context<'_>) -> Result<(), Error> {
