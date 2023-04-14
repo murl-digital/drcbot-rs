@@ -40,6 +40,35 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
             let metadata = current.metadata();
             let type_map = current.typemap().read().await;
             let requester = type_map.get::<TrackRequester>();
+            let color = match metadata.thumbnail.clone() {
+                Some(t) => {
+                    if let Ok(response) = reqwest::get(t).await {
+                        if let Ok(image_bytes) = response.bytes().await {
+                            if let Ok(image) = image::load_from_memory(&image_bytes) {
+                                let pixels = image.to_rgb8();
+
+                                if let Ok(mut pallette) =
+                                    color_thief::get_palette(&pixels, color_thief::ColorFormat::Rgb, 10, 2) {
+                                        // TODO: this is a really dumb way to choose a color from the pallete
+                                        // while it's determinstic, itll go for a white over a more interesting color
+                                        pallette.sort();
+                                        pallette.reverse();
+                                        Some(pallette[0])
+                                    } else {
+                                        None
+                                    }
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }
+                None => None,
+            };
             send_application_reply(ctx, |r| {
                 r.embed(|e| {
                     e.title("Now Playing:")
@@ -67,6 +96,10 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
                             true,
                         )
                         .timestamp(Utc::now());
+
+                    if let Some(color) = color {
+                        e.color((color.r, color.g, color.b));
+                    } 
 
                     if let Some(requester) = requester {
                         e.footer(|f| {
