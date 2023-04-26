@@ -4,11 +4,14 @@ use poise::send_application_reply;
 
 use crate::{
     commands::music::{get_client, SkipVotes, TrackRequester},
-    Context, Error,
+    local_get, Context, Error,
 };
 
 #[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locale should always be available for slash commands");
     let guild = ctx.guild().unwrap();
     let channel = guild
         .voice_states
@@ -18,7 +21,14 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
     let current_channel = match channel {
         Some(channel) => channel,
         None => {
-            send_application_reply(ctx, |r| r.content("you're not in a vc lmao")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_usernotinvc",
+                    locale,
+                ))
+            })
+            .await?;
 
             return Ok(());
         }
@@ -55,11 +65,11 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
                                 ) {
                                     // sort by saturation
                                     pallette.sort_by(|a, b| saturation_from_rgb(a.r, a.g, a.b).partial_cmp(&saturation_from_rgb(b.r, b.g, b.b)).expect("NaN snuck in, something has gone wrong with pallette sorting"));
-                                        pallette.reverse();
-                                        Some(pallette[0])
-                                    } else {
-                                        None
-                                    }
+                                    pallette.reverse();
+                                    Some(pallette[0])
+                                } else {
+                                    None
+                                }
                             } else {
                                 None
                             }
@@ -102,7 +112,7 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
 
                     if let Some(color) = color {
                         e.color((color.r, color.g, color.b));
-                    } 
+                    }
 
                     if let Some(requester) = requester {
                         e.footer(|f| {
@@ -117,7 +127,14 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
             .await?;
         }
     } else {
-        send_application_reply(ctx, |r| r.content("not in a vc with the bot")).await?;
+        send_application_reply(ctx, |r| {
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_music_notwithbot",
+                locale,
+            ))
+        })
+        .await?;
     }
 
     Ok(())
@@ -125,6 +142,9 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(slash_command, ephemeral, guild_only)]
 pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locale should always be available for slash commands");
     let guild = ctx.guild().unwrap();
     let channel = guild
         .voice_states
@@ -134,7 +154,14 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     let current_channel = match channel {
         Some(channel) => channel,
         None => {
-            send_application_reply(ctx, |r| r.content("you're not in a vc lmao")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_usernotinvc",
+                    locale,
+                ))
+            })
+            .await?;
 
             return Ok(());
         }
@@ -174,18 +201,44 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
                     if votes.len() == (users_in_channel / 2) {
                         let _ = handler.queue().skip();
                     }
-                    send_application_reply(ctx, |r| r.content("your vote has been counted"))
-                        .await?;
+                    send_application_reply(ctx, |r| {
+                        r.content(local_get(
+                            &ctx.data.translator,
+                            "commands_music_controls_skip_success",
+                            locale,
+                        ))
+                    })
+                    .await?;
                 }
             } else {
-                send_application_reply(ctx, |r| r.content("no tracks are playing right now"))
-                    .await?;
+                send_application_reply(ctx, |r| {
+                    r.content(local_get(
+                        &ctx.data.translator,
+                        "commands_music_controls_skip_notplaying",
+                        locale,
+                    ))
+                })
+                .await?;
             }
         } else {
-            send_application_reply(ctx, |r| r.content("you're not in a vc with the bot")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_notwithbot",
+                    locale,
+                ))
+            })
+            .await?;
         }
     } else {
-        send_application_reply(ctx, |r| r.content("not in any vcs atm")).await?;
+        send_application_reply(ctx, |r| {
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_music_botnotinvc",
+                locale,
+            ))
+        })
+        .await?;
     }
 
     Ok(())

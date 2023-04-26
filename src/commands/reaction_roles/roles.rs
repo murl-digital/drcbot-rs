@@ -4,7 +4,7 @@ use poise::{
     serenity_prelude::{ActionRowComponent, Message, ReactionType, Role},
 };
 
-use crate::{commands::reaction_roles::RoleButton, Context, Error, ID_REGEX};
+use crate::{commands::reaction_roles::RoleButton, local_get, Context, Error, ID_REGEX};
 
 #[poise::command(slash_command, subcommands("add"))]
 pub async fn roles(_: Context<'_>) -> Result<(), Error> {
@@ -19,9 +19,16 @@ async fn add(
     name: Option<String>,
     mut message: Message,
 ) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locale should always be available for slash commands");
     if message.author.id != ctx.serenity_context().cache.current_user_id() {
         send_application_reply(ctx, |r| {
-            r.content("This message wasn't sent by me, are you sure this is the right one?")
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_reactionroles_add_notsentbybot",
+                locale,
+            ))
         })
         .await?;
 
@@ -40,7 +47,14 @@ async fn add(
         let button = match component {
             ActionRowComponent::Button(b) => b,
             _ => {
-                send_application_reply(ctx, |r| r.content("This message probably isn't a reactionroles message. Reactionroles messages only have buttons.")).await?;
+                send_application_reply(ctx, |r| {
+                    r.content(local_get(
+                        &ctx.data.translator,
+                        "commands_reactionroles_roles_add_probablynoindex",
+                        locale,
+                    ))
+                })
+                .await?;
                 return Ok(());
             }
         };
@@ -48,20 +62,41 @@ async fn add(
         let id = match button.custom_id {
             Some(id) => id,
             None => {
-                send_application_reply(ctx, |r| r.content("This message isn't a reaction roles message. Double check that you're passing the right one.")).await?;
+                send_application_reply(ctx, |r| {
+                    r.content(local_get(
+                        &ctx.data.translator,
+                        "commands_reactionroles_roles_add_noindex",
+                        locale,
+                    ))
+                })
+                .await?;
                 return Ok(());
             }
         };
 
         if !ID_REGEX.is_match(&id) {
-            send_application_reply(ctx, |r| r.content("This message isn't a reaction roles message. Double check that you're passing the right one.")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_add_noindex",
+                    locale,
+                ))
+            })
+            .await?;
             return Ok(());
         }
 
         let label = match button.label {
             Some(l) => l,
             None => {
-                send_application_reply(ctx, |r| r.content("This message isn't a reaction roles message. Double check that you're passing the right one.")).await?;
+                send_application_reply(ctx, |r| {
+                    r.content(local_get(
+                        &ctx.data.translator,
+                        "commands_reactionroles_roles_add_noindex",
+                        locale,
+                    ))
+                })
+                .await?;
                 return Ok(());
             }
         };
@@ -107,7 +142,14 @@ async fn add(
         })
         .await?;
 
-    send_application_reply(ctx, |r| r.content("Role added")).await?;
+    send_application_reply(ctx, |r| {
+        r.content(local_get(
+            &ctx.data.translator,
+            "commands_reactionroles_roles_add_success",
+            locale,
+        ))
+    })
+    .await?;
 
     Ok(())
 }

@@ -2,7 +2,7 @@ use poise::{send_application_reply, serenity_prelude::Attachment};
 use songbird::input::Restartable;
 use url::Url;
 
-use crate::{Context, Error, MIME_AUDIO_REGEX};
+use crate::{local_get, Context, Error, MIME_AUDIO_REGEX};
 
 use super::{get_handler, TrackRequester};
 
@@ -20,6 +20,9 @@ async fn url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
 
 #[poise::command(slash_command, ephemeral, guild_only)]
 async fn attachment(ctx: Context<'_>, file: Attachment) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locales should always be available for slash commands");
     if let Some(content_type) = file.content_type {
         if MIME_AUDIO_REGEX.is_match(&content_type) {
             ctx.defer_ephemeral().await?;
@@ -30,18 +33,32 @@ async fn attachment(ctx: Context<'_>, file: Attachment) -> Result<(), Error> {
             .await?;
         } else {
             send_application_reply(ctx, |r| {
-                r.content("this isn't an audio file, make sure it is")
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_playback_attachment_notaudio",
+                    locale,
+                ))
             })
             .await?;
         }
     } else {
-        send_application_reply(ctx, |r| r.content("no content type found")).await?;
+        send_application_reply(ctx, |r| {
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_music_playback_attachment_nocontenttype",
+                locale,
+            ))
+        })
+        .await?;
     }
 
     Ok(())
 }
 
 async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locales should always be available for slash commands");
     let guild = ctx.guild().unwrap();
     let guild_id = guild.id;
 
@@ -53,7 +70,14 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
     let connect_to = match channel {
         Some(channel) => channel,
         None => {
-            send_application_reply(ctx, |r| r.content("you're not in a vc lmao")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_usernotinvc",
+                    locale,
+                ))
+            })
+            .await?;
 
             return Ok(());
         }
@@ -65,7 +89,14 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
 
     if let Some(current_channel) = handler.current_channel() {
         if current_channel.0 != connect_to.0 {
-            send_application_reply(ctx, |r| r.content("I'm already in a call")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_alreadyinvc",
+                    locale,
+                ))
+            })
+            .await?;
 
             return Ok(());
         }
@@ -76,7 +107,14 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
         Err(why) => {
             println!("problem starting source: {:?}", why);
 
-            send_application_reply(ctx, |r| r.content("Error sourcing ffmpeg")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_music_playback_ffmpeg",
+                    locale,
+                ))
+            })
+            .await?;
 
             return Ok(());
         }
@@ -92,7 +130,14 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
     let mut type_map = handle.typemap().write().await;
     type_map.insert::<TrackRequester>(TrackRequester { name, avatar_url });
 
-    send_application_reply(ctx, |r| r.content("your track has been queued now")).await?;
+    send_application_reply(ctx, |r| {
+        r.content(local_get(
+            &ctx.data.translator,
+            "commands_music_playback_queued",
+            locale,
+        ))
+    })
+    .await?;
 
     Ok(())
 }

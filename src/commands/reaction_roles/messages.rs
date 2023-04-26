@@ -1,5 +1,5 @@
 use crate::commands::reaction_roles::update_index;
-use crate::{Context, Error};
+use crate::{local_get, Context, Error};
 use poise::serenity_prelude::GuildChannel;
 use poise::{send_application_reply, Modal};
 
@@ -20,13 +20,20 @@ struct MessageCreate {
 
 #[poise::command(slash_command)]
 async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locale should always be available for slash commands");
     if crate::data::get_index(&ctx.data.client, &channel.guild_id)
         .await?
         .is_some()
     {
         send_application_reply(ctx, |r| {
-            r.content("You already have an index in this guild")
-                .ephemeral(true)
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_reactionroles_init_exists",
+                locale,
+            ))
+            .ephemeral(true)
         })
         .await?;
 
@@ -46,7 +53,12 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
     crate::data::save_index(&ctx.data.client, channel.guild_id, channel.id, message.id).await?;
 
     send_application_reply(ctx, |r| {
-        r.content("Index successfully created").ephemeral(true)
+        r.content(local_get(
+            &ctx.data.translator,
+            "commands_reactionroles_init_success",
+            locale,
+        ))
+        .ephemeral(true)
     })
     .await?;
 
@@ -55,6 +67,9 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
 
 #[poise::command(slash_command)]
 async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locale should always be available for slash commands");
     if let Some(mut index) = crate::data::get_index(&ctx.data.client, &channel.guild_id).await? {
         if let Some(message_data) = MessageCreate::execute(ctx).await? {
             let message = channel
@@ -84,12 +99,23 @@ async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<
 
             update_index(&ctx, &index).await?;
 
-            send_application_reply(ctx, |r| r.content("Message created!")).await?;
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_add_success",
+                    locale,
+                ))
+            })
+            .await?;
         }
     } else {
         send_application_reply(ctx, |r| {
-            r.content("Looks like you don't have an index, cope.")
-                .ephemeral(true)
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_reactionroles_add_noindex",
+                locale,
+            ))
+            .ephemeral(true)
         })
         .await?;
     }

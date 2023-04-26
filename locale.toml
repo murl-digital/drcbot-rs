@@ -1,0 +1,79 @@
+[commands_music_usernotinvc]
+en_us = "I don't see you in a voice call."
+en_uk = "I don't see you in a voice call."
+
+[commands_music_botnotinvc]
+en_us = "I'm not in a voice call right now."
+en_uk = "I'm not in a voice call right now."
+
+[commands_music_notwithbot]
+en_us = "You're not in a call with me."
+en_uk = "You're not in a call with me."
+
+[commands_music_alreadyinvc]
+en_us = "I'm already in a voice call, I can't join another one."
+en_uk = "I'm already in a voice call, I can't join another one."
+
+[commands_music_admin_forceskip_success]
+en_us = "Current track has been skipped."
+en_uk = "Current track has been skipped."
+
+[commands_music_admin_stop_success]
+en_us = "Playback has been stopped and the queue has been cleared."
+en_uk = "Playback has been stopped and the queue has been cleared."
+
+[commands_music_controls_skip_votecounted]
+en_us = "Your vote has been counted."
+en_uk = "Your vote has been counted."
+
+[commands_music_controls_skip_notplaying]
+en_us = "Nothing is playing right now."
+en_uk = "Nothing is playing right now."
+
+[commands_music_playback_attachment_notaudio]
+en_us = "This is not an audio file. Make sure it is and try again."
+en_uk = "This is not an audio file. Make sure it is and try again."
+
+[commands_music_playback_attachment_nocontenttype]
+en_us = "The attachment you uploaded doesn't seem to have a valid content type. Try uploading again or choose a different audio file."
+en_uk = "The attachment you uploaded doesn't seem to have a valid content type. Try uploading again or choose a different audio file."
+
+[commands_music_playback_queued]
+en_us = "Your track has been queued."
+en_uk = "Your track has been queued."
+
+[commands_music_playback_ffmpeg]
+en_us = "There was a problem sourcing FFMPEG. Try again later."
+en_uk = "There was a problem sourcing FFMPEG. Try again later."
+
+[commands_reactionroles_init_exists]
+en_us = "You already have an index in this guild."
+en_uk = "You already have an index in this guild."
+
+[commands_reactionroles_init_success]
+en_us = "Index successfully created."
+en_uk = "Index successfully created."
+
+[commands_reactionroles_add_noindex]
+en_us = "It looks like you don't have an index. Use /reactionroles init to create an index."
+en_uk = "It looks like you don't have an index. Use /reactionroles init to create an index."
+
+[commands_reactionroles_add_success]
+en_us = "Message created!"
+en_uk = "Message created!"
+
+[commands_reactionroles_add_notsentbybot]
+en_us = "This message wasn't sent by me, are you sure this is the right one?"
+en_uk = "This message wasn't sent by me, are you sure this is the right one?"
+
+[commands_reactionroles_roles_add_probablynoindex]
+en_us = "This message probably isn't a reactionroles message. Reactionroles messages only have buttons."
+en_uk = "This message probably isn't a reactionroles message. Reactionroles messages only have buttons."
+
+[commands_reactionroles_roles_add_noindex]
+en_us = "This message isn't a reaction roles message. Double check that you're passing the right one."
+en_uk = "This message isn't a reaction roles message. Double check that you're passing the right one."
+
+[commands_reactionroles_roles_add_success]
+en_us = "Role added."
+en_uk = "Role added."

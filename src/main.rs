@@ -1,5 +1,6 @@
 use commands::{music::music, reaction_roles::reaction_roles};
 use lazy_static::lazy_static;
+use locale::Translator;
 use mongodb::Client;
 use poise::builtins::register_globally;
 use poise::serenity_prelude::{GatewayIntents, Interaction, MessageBuilder};
@@ -13,6 +14,7 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 
 mod commands;
 mod data;
+mod locale;
 
 use regex::Regex;
 use songbird::SerenityInit;
@@ -20,6 +22,7 @@ use songbird::SerenityInit;
 #[derive(Debug)]
 pub struct Data {
     pub client: Arc<Client>,
+    pub translator: Arc<Translator>,
 }
 
 lazy_static! {
@@ -41,6 +44,10 @@ async fn main() {
             .expect("config doesn't exist"),
     )
     .expect("invalid config");
+
+    let translator = Translator::new("locale.toml")
+        .await
+        .expect("translator required for working bot");
 
     let mongo_client = Client::with_uri_str(config.mongodb_url)
         .await
@@ -75,11 +82,18 @@ async fn main() {
                 register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
                     client: Arc::new(mongo_client),
+                    translator: Arc::new(translator),
                 })
             })
         });
 
     framework.run().await.unwrap();
+}
+
+pub fn local_get(translator: &Translator, key: &str, locale: &str) -> String {
+    translator
+        .get(key, locale)
+        .unwrap_or(translator.get(key, "en-US").expect("key doesn't exist"))
 }
 
 async fn handle_reaction_roles(
