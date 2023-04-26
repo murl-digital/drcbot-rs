@@ -47,11 +47,14 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
                             if let Ok(image) = image::load_from_memory(&image_bytes) {
                                 let pixels = image.to_rgb8();
 
-                                if let Ok(mut pallette) =
-                                    color_thief::get_palette(&pixels, color_thief::ColorFormat::Rgb, 10, 2) {
-                                        // TODO: this is a really dumb way to choose a color from the pallete
-                                        // while it's determinstic, itll go for a white over a more interesting color
-                                        pallette.sort();
+                                if let Ok(mut pallette) = color_thief::get_palette(
+                                    &pixels,
+                                    color_thief::ColorFormat::Rgb,
+                                    10,
+                                    2,
+                                ) {
+                                    // sort by saturation
+                                    pallette.sort_by(|a, b| saturation_from_rgb(a.r, a.g, a.b).partial_cmp(&saturation_from_rgb(b.r, b.g, b.b)).expect("NaN snuck in, something has gone wrong with pallette sorting"));
                                         pallette.reverse();
                                         Some(pallette[0])
                                     } else {
@@ -186,4 +189,17 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+// dervied from https://donatbalipapp.medium.com/colours-maths-90346fb5abda
+fn saturation_from_rgb(r: u8, g: u8, b: u8) -> f64 {
+    let max_rgb = r.max(g).max(b) as f64;
+    let min_rgb = r.min(g).min(b) as f64;
+    let luminosity = 0.5 * (max_rgb + min_rgb);
+
+    if luminosity < 1. {
+        (max_rgb - min_rgb) / 1. - (2. * luminosity - 1.)
+    } else {
+        0.
+    }
 }
