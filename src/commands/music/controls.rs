@@ -1,9 +1,9 @@
-use chrono::Utc;
-
 use poise::send_application_reply;
 
 use crate::{
-    commands::music::{get_client, SkipVotes, TrackRequester},
+    commands::music::{
+        get_client, get_color_from_thumbnail, make_now_playing_embed, SkipVotes, TrackRequester,
+    },
     local_get, Context, Error,
 };
 
@@ -50,79 +50,9 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
             let metadata = current.metadata();
             let type_map = current.typemap().read().await;
             let requester = type_map.get::<TrackRequester>();
-            let color = match metadata.thumbnail.clone() {
-                Some(t) => {
-                    if let Ok(response) = reqwest::get(t).await {
-                        if let Ok(image_bytes) = response.bytes().await {
-                            if let Ok(image) = image::load_from_memory(&image_bytes) {
-                                let pixels = image.to_rgb8();
-
-                                if let Ok(mut pallette) = color_thief::get_palette(
-                                    &pixels,
-                                    color_thief::ColorFormat::Rgb,
-                                    10,
-                                    2,
-                                ) {
-                                    // sort by saturation
-                                    pallette.sort_by(|a, b| saturation_from_rgb(a.r, a.g, a.b).partial_cmp(&saturation_from_rgb(b.r, b.g, b.b)).expect("NaN snuck in, something has gone wrong with pallette sorting"));
-                                    pallette.reverse();
-                                    Some(pallette[0])
-                                } else {
-                                    None
-                                }
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                }
-                None => None,
-            };
+            let color = get_color_from_thumbnail(metadata).await;
             send_application_reply(ctx, |r| {
-                r.embed(|e| {
-                    e.title("Now Playing:")
-                        .thumbnail(
-                            metadata
-                                .thumbnail
-                                .clone()
-                                .unwrap_or("https://http.cat/404".to_string()),
-                        )
-                        .description(format!(
-                            "*{}*",
-                            metadata
-                                .source_url
-                                .clone()
-                                .unwrap_or("https://http.cat/404".to_string())
-                        ))
-                        .field(
-                            "Title",
-                            metadata.title.clone().unwrap_or("-".to_string()),
-                            true,
-                        )
-                        .field(
-                            "Artist",
-                            metadata.artist.clone().unwrap_or("-".to_string()),
-                            true,
-                        )
-                        .timestamp(Utc::now());
-
-                    if let Some(color) = color {
-                        e.color((color.r, color.g, color.b));
-                    }
-
-                    if let Some(requester) = requester {
-                        e.footer(|f| {
-                            f.icon_url(requester.avatar_url.to_owned())
-                                .text(format!("Requested by {}", requester.name))
-                        });
-                    }
-
-                    e
-                })
+                r.embed(|e| make_now_playing_embed(e, metadata, color, requester))
             })
             .await?;
         }
@@ -242,17 +172,4 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     }
 
     Ok(())
-}
-
-// dervied from https://donatbalipapp.medium.com/colours-maths-90346fb5abda
-fn saturation_from_rgb(r: u8, g: u8, b: u8) -> f64 {
-    let max_rgb = r.max(g).max(b) as f64;
-    let min_rgb = r.min(g).min(b) as f64;
-    let luminosity = 0.5 * (max_rgb + min_rgb);
-
-    if luminosity < 1. {
-        (max_rgb - min_rgb) / 1. - (2. * luminosity - 1.)
-    } else {
-        0.
-    }
 }
