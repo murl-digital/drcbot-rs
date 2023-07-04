@@ -91,9 +91,11 @@ async fn main() {
 }
 
 pub fn local_get(translator: &Translator, key: &str, locale: &str) -> String {
-    translator
-        .get(key, locale)
-        .unwrap_or(translator.get(key, "en-US").unwrap_or_else(|_| panic!("key {} doesn't exist", key)))
+    translator.get(key, locale).unwrap_or(
+        translator
+            .get(key, "en-US")
+            .unwrap_or_else(|_| panic!("key {} doesn't exist", key)),
+    )
 }
 
 async fn handle_reaction_roles(
