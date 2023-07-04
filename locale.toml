@@ -26,6 +26,10 @@ en_uk = "Playback has been stopped and the queue has been cleared."
 en_us = "Your vote has been counted."
 en_uk = "Your vote has been counted."
 
+[commands_music_controls_skip_success]
+en_us = "Track has been skipped."
+en_uk = "Track has been skipped."
+
 [commands_music_controls_skip_notplaying]
 en_us = "Nothing is playing right now."
 en_uk = "Nothing is playing right now."
