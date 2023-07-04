@@ -1,10 +1,13 @@
-use poise::{send_application_reply, serenity_prelude::{Attachment, Channel}};
+use poise::{
+    send_application_reply,
+    serenity_prelude::{Attachment, Channel},
+};
 use songbird::input::Restartable;
 use url::Url;
 
 use crate::{local_get, Context, Error, MIME_AUDIO_REGEX};
 
-use super::{get_handler, TrackRequester, make_now_playing_embed, get_color_from_thumbnail};
+use super::{get_color_from_thumbnail, get_handler, make_now_playing_embed, TrackRequester};
 
 #[poise::command(slash_command, subcommands("url", "attachment"))]
 pub async fn play(_: Context<'_>) -> Result<(), Error> {
@@ -145,11 +148,19 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
             if let Ok(Channel::Guild(current_channel)) = http.get_channel(current_channel.0).await {
                 let color = get_color_from_thumbnail(handle.metadata()).await;
 
-                if let Err(why) = current_channel.send_message(http, |m| {
-                    m.add_embed(|e| {
-                        make_now_playing_embed(e, handle.metadata(), color, type_map.get::<TrackRequester>())
+                if let Err(why) = current_channel
+                    .send_message(http, |m| {
+                        m.add_embed(|e| {
+                            make_now_playing_embed(
+                                e,
+                                handle.metadata(),
+                                color,
+                                type_map.get::<TrackRequester>(),
+                            )
+                        })
                     })
-                }).await {
+                    .await
+                {
                     println!("Error sending now playing message: {:?}", why);
                 }
             }

@@ -151,7 +151,6 @@ fn make_now_playing_embed<'_0>(
     color: Option<RGB<u8>>,
     requester: Option<&TrackRequester>,
 ) -> &'_0 mut CreateEmbed {
-
     embed
         .title("Now Playing:")
         .thumbnail(
