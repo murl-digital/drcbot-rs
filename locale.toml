@@ -70,6 +70,14 @@ en_uk = "Message created!"
 en_us = "This message wasn't sent by me, are you sure this is the right one?"
 en_uk = "This message wasn't sent by me, are you sure this is the right one?"
 
+[commands_reactionroles_remove_noindex]
+en_us = "It looks like you don't have an index. Use /reactionroles init to create an index."
+en_uk = "It looks like you don't have an index. Use /reactionroles init to create an index."
+
+[commands_reactionroles_remove_success]
+en_us = "Message removed! Double check and make sure that the message was actually deleted."
+en_uk = "Message created! Double check and make sure that the message was actually deleted."
+
 [commands_reactionroles_roles_add_probablynoindex]
 en_us = "This message probably isn't a reactionroles message. Reactionroles messages only have buttons."
 en_uk = "This message probably isn't a reactionroles message. Reactionroles messages only have buttons."
@@ -81,3 +89,15 @@ en_uk = "This message isn't a reaction roles message. Double check that you're p
 [commands_reactionroles_roles_add_success]
 en_us = "Role added."
 en_uk = "Role added."
+
+[commands_reactionroles_roles_remove_probablynoindex]
+en_us = "This message probably isn't a reactionroles message. Reactionroles messages only have buttons."
+en_uk = "This message probably isn't a reactionroles message. Reactionroles messages only have buttons."
+
+[commands_reactionroles_roles_remove_noindex]
+en_us = "This message isn't a reaction roles message. Double check that you're passing the right one."
+en_uk = "This message isn't a reaction roles message. Double check that you're passing the right one."
+
+[commands_reactionroles_roles_remove_success]
+en_us = "Role removed."
+en_uk = "Role removed."

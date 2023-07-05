@@ -1,9 +1,9 @@
 use crate::commands::reaction_roles::update_index;
 use crate::{local_get, Context, Error};
-use poise::serenity_prelude::GuildChannel;
+use poise::serenity_prelude::{GuildChannel, Message};
 use poise::{send_application_reply, Modal};
 
-#[poise::command(slash_command, subcommands("init", "add"))]
+#[poise::command(slash_command, subcommands("init", "add", "list", "remove"))]
 pub async fn messages(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
@@ -18,7 +18,7 @@ struct MessageCreate {
     description: String,
 }
 
-#[poise::command(slash_command)]
+#[poise::command(slash_command, ephemeral)]
 async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
     let locale = ctx
         .locale()
@@ -71,7 +71,7 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
     Ok(())
 }
 
-#[poise::command(slash_command)]
+#[poise::command(slash_command, ephemeral)]
 async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<(), Error> {
     let locale = ctx
         .locale()
@@ -122,6 +122,89 @@ async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<
                 locale,
             ))
             .ephemeral(true)
+        })
+        .await?;
+    }
+
+    Ok(())
+}
+
+#[poise::command(slash_command, ephemeral)]
+async fn remove(ctx: Context<'_>, message: Message) -> Result<(), Error> {
+    let locale = ctx
+        .locale()
+        .expect("locale should always be available for slash commands");
+
+    if let Some(guild_id) = message.guild_id {
+        if let Some(mut index) = ctx.data.database.get_index(&guild_id).await? {
+            if index.messages.iter().any(|m| m.message_id == message.id) {
+                message.delete(&ctx.serenity_context.http).await?;
+
+                index.messages.retain(|m| m.message_id != message.id);
+
+                ctx.data.database.replace_index(&index).await?;
+
+                update_index(&ctx, &index).await?;
+
+                send_application_reply(ctx, |r| {
+                    r.content(local_get(
+                        &ctx.data.translator,
+                        "commands_reactionroles_remove_success",
+                        locale,
+                    ))
+                })
+                .await?;
+            }
+        } else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_remove_noindex",
+                    locale,
+                ))
+                .ephemeral(true)
+            })
+            .await?;
+        }
+    }
+
+    Ok(())
+}
+
+#[poise::command(slash_command, ephemeral)]
+async fn list(ctx: Context<'_>) -> Result<(), Error> {
+    if let Some(index) = ctx
+        .data
+        .database
+        .get_index(&ctx.guild_id().expect("we should be in a guild right now"))
+        .await?
+    {
+        send_application_reply(ctx, |r| {
+            r.embed(|e| {
+                e.field(
+                    "Index",
+                    format!(
+                        "https://discord.com/channels/{}/{}/{}",
+                        index.guild_id.as_u64(),
+                        index.channel_id.as_u64(),
+                        index.message_id.as_u64()
+                    ),
+                    false,
+                );
+
+                e.fields(index.messages.iter().map(|m| {
+                    (
+                        &m.title,
+                        format!(
+                            "https://discord.com/channels/{}/{}/{}",
+                            index.guild_id.as_u64(),
+                            m.channel_id.as_u64(),
+                            m.message_id.as_u64()
+                        ),
+                        true,
+                    )
+                }))
+            })
         })
         .await?;
     }
