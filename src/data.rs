@@ -6,6 +6,12 @@ use mongodb::{
 use poise::serenity_prelude::{ChannelId, GuildId, MessageId};
 use serde_derive::{Deserialize, Serialize};
 
+#[derive(Debug)]
+pub struct Database {
+    client: Client,
+    database: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct ReactionRolesIndex {
     pub guild_id: GuildId,
@@ -21,46 +27,52 @@ pub struct ReactionRolesMessage {
     pub message_id: MessageId,
 }
 
-pub async fn get_index(
-    client: &Client,
-    guild_id: &GuildId,
-) -> Result<Option<ReactionRolesIndex>, mongodb::error::Error> {
-    let db = client.database("placeholder");
-    let collection = db.collection("reactionRolesIndices");
-    let filter = doc! { "guild_id":  guild_id.0.to_string() };
+impl Database {
+    pub fn new(client: Client, database: String) -> Database {
+        Database { client, database }
+    }
 
-    collection.find_one(filter, None).await
-}
+    pub async fn get_index(
+        &self,
+        guild_id: &GuildId,
+    ) -> Result<Option<ReactionRolesIndex>, mongodb::error::Error> {
+        let db = self.client.database(&self.database);
+        let collection = db.collection("reactionRolesIndices");
+        let filter = doc! { "guild_id":  guild_id.0.to_string() };
 
-pub async fn save_index(
-    client: &Client,
-    guild_id: GuildId,
-    channel_id: ChannelId,
-    message_id: MessageId,
-) -> Result<InsertOneResult, mongodb::error::Error> {
-    let db = client.database("placeholder");
-    let collection = db.collection("reactionRolesIndices");
+        collection.find_one(filter, None).await
+    }
 
-    collection
-        .insert_one(
-            ReactionRolesIndex {
-                guild_id,
-                channel_id,
-                message_id,
-                messages: vec![],
-            },
-            None,
-        )
-        .await
-}
+    pub async fn save_index(
+        &self,
+        guild_id: GuildId,
+        channel_id: ChannelId,
+        message_id: MessageId,
+    ) -> Result<InsertOneResult, mongodb::error::Error> {
+        let db = self.client.database(&self.database);
+        let collection = db.collection("reactionRolesIndices");
 
-pub async fn replace_index(
-    client: &Client,
-    index: &ReactionRolesIndex,
-) -> Result<UpdateResult, mongodb::error::Error> {
-    let db = client.database("placeholder");
-    let collection = db.collection::<ReactionRolesIndex>("reactionRolesIndices");
-    let query = doc! { "guild_id": index.guild_id.0.to_string() };
+        collection
+            .insert_one(
+                ReactionRolesIndex {
+                    guild_id,
+                    channel_id,
+                    message_id,
+                    messages: vec![],
+                },
+                None,
+            )
+            .await
+    }
 
-    collection.replace_one(query, index, None).await
+    pub async fn replace_index(
+        &self,
+        index: &ReactionRolesIndex,
+    ) -> Result<UpdateResult, mongodb::error::Error> {
+        let db = self.client.database(&self.database);
+        let collection = db.collection::<ReactionRolesIndex>("reactionRolesIndices");
+        let query = doc! { "guild_id": index.guild_id.0.to_string() };
+
+        collection.replace_one(query, index, None).await
+    }
 }

@@ -1,4 +1,5 @@
 use commands::{music::music, reaction_roles::reaction_roles};
+use data::Database;
 use lazy_static::lazy_static;
 use locale::Translator;
 use mongodb::Client;
@@ -21,7 +22,7 @@ use songbird::SerenityInit;
 
 #[derive(Debug)]
 pub struct Data {
-    pub client: Arc<Client>,
+    pub database: Arc<Database>,
     pub translator: Arc<Translator>,
 }
 
@@ -34,6 +35,7 @@ lazy_static! {
 struct Config {
     token: String,
     mongodb_url: String,
+    mongodb_database: String,
 }
 
 #[tokio::main]
@@ -81,7 +83,7 @@ async fn main() {
             Box::pin(async move {
                 register_globally(ctx, &framework.options().commands).await?;
                 Ok(Data {
-                    client: Arc::new(mongo_client),
+                    database: Arc::new(Database::new(mongo_client, config.mongodb_database)),
                     translator: Arc::new(translator),
                 })
             })

@@ -23,7 +23,10 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    if crate::data::get_index(&ctx.data.client, &channel.guild_id)
+    if ctx
+        .data
+        .database
+        .get_index(&channel.guild_id)
         .await?
         .is_some()
     {
@@ -50,7 +53,10 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
         })
         .await?;
 
-    crate::data::save_index(&ctx.data.client, channel.guild_id, channel.id, message.id).await?;
+    ctx.data
+        .database
+        .save_index(channel.guild_id, channel.id, message.id)
+        .await?;
 
     send_application_reply(ctx, |r| {
         r.content(local_get(
@@ -70,7 +76,7 @@ async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    if let Some(mut index) = crate::data::get_index(&ctx.data.client, &channel.guild_id).await? {
+    if let Some(mut index) = ctx.data.database.get_index(&channel.guild_id).await? {
         if let Some(message_data) = MessageCreate::execute(ctx).await? {
             let message = channel
                 .send_message(ctx.serenity_context, |m| {
@@ -95,7 +101,7 @@ async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<
                 channel_id: channel.id,
             });
 
-            crate::data::replace_index(&ctx.data.client, &index).await?;
+            ctx.data.database.replace_index(&index).await?;
 
             update_index(&ctx, &index).await?;
 
