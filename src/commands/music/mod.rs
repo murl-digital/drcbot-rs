@@ -27,7 +27,7 @@ struct QuickLeave;
 
 impl TypeMapKey for QuickLeave {
     type Value = Self;
-} 
+}
 
 struct SkipVotes;
 
@@ -77,10 +77,10 @@ async fn get_handler(
             if lock.current_channel().is_none() {
                 drop(lock);
                 let (lock, result) = manager.join(*guild_id, *connect_to).await;
-                
+
                 match result {
                     Ok(()) => lock,
-                    Err(why) => return Err(why.into())
+                    Err(why) => return Err(why.into()),
                 }
             } else {
                 drop(lock);
@@ -109,15 +109,18 @@ async fn get_handler(
                 },
             );
 
-            lock.add_global_event(songbird::Event::Track(songbird::TrackEvent::End), QuickLeaveHandler {
-                manager: manager.clone(),
-                guild: *guild_id
-            });
+            lock.add_global_event(
+                songbird::Event::Track(songbird::TrackEvent::End),
+                QuickLeaveHandler {
+                    manager: manager.clone(),
+                    guild: *guild_id,
+                },
+            );
         }
 
         match result {
             Ok(()) => handler,
-            Err(why) => return Err(why.into())
+            Err(why) => return Err(why.into()),
         }
     };
 
@@ -256,9 +259,13 @@ impl EventHandler for AutoLeave {
         if let EventContext::Track(list) = ctx {
             if let Some(handler_lock) = self.manager.get(self.guild) {
                 let mut handler = handler_lock.lock().await;
-                if list[0].1.typemap().read().await.contains_key::<QuickLeave>() && handler.queue().is_empty() {
-                    let _dc = handler.leave().await;
-                    drop(handler);
+                if let Some(first) = list.first() {
+                    if first.1.typemap().read().await.contains_key::<QuickLeave>()
+                        && handler.queue().is_empty()
+                    {
+                        let _dc = handler.leave().await;
+                        drop(handler);
+                    }
                 }
             }
         }

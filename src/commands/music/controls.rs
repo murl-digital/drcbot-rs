@@ -76,7 +76,9 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    let guild = ctx.guild().expect("no guild provided for guild only command");
+    let guild = ctx
+        .guild()
+        .expect("no guild provided for guild only command");
     let channel = guild
         .voice_states
         .get(&ctx.author().id)
