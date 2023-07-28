@@ -23,6 +23,12 @@ use crate::{
     Context, Error,
 };
 
+struct QuickLeave;
+
+impl TypeMapKey for QuickLeave {
+    type Value = Self;
+} 
+
 struct SkipVotes;
 
 impl TypeMapKey for SkipVotes {
@@ -102,6 +108,11 @@ async fn get_handler(
                     guild: *guild_id,
                 },
             );
+
+            lock.add_global_event(songbird::Event::Track(songbird::TrackEvent::End), QuickLeaveHandler {
+                manager: manager.clone(),
+                guild: *guild_id
+            });
         }
 
         match result {
@@ -241,6 +252,28 @@ struct AutoLeave {
 
 #[async_trait]
 impl EventHandler for AutoLeave {
+    async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
+        if let EventContext::Track(list) = ctx {
+            if let Some(handler_lock) = self.manager.get(self.guild) {
+                let mut handler = handler_lock.lock().await;
+                if list[0].1.typemap().read().await.contains_key::<QuickLeave>() && handler.queue().is_empty() {
+                    let _dc = handler.leave().await;
+                    drop(handler);
+                }
+            }
+        }
+
+        None
+    }
+}
+
+struct QuickLeaveHandler {
+    manager: Arc<Songbird>,
+    guild: GuildId,
+}
+
+#[async_trait]
+impl EventHandler for QuickLeaveHandler {
     async fn act(&self, _ctx: &EventContext<'_>) -> Option<Event> {
         if let Some(handler_lock) = self.manager.get(self.guild) {
             let mut handler = handler_lock.lock().await;

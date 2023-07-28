@@ -7,7 +7,7 @@ use url::Url;
 
 use crate::{local_get, Context, Error, MIME_AUDIO_REGEX};
 
-use super::{get_color_from_thumbnail, get_handler, make_now_playing_embed, TrackRequester};
+use super::{get_color_from_thumbnail, get_handler, make_now_playing_embed, TrackRequester, QuickLeave};
 
 #[poise::command(slash_command, subcommands("url", "attachment"))]
 #[allow(clippy::unused_async)]
@@ -16,14 +16,14 @@ pub async fn play(_: Context<'_>) -> Result<(), Error> {
 }
 
 #[poise::command(slash_command, ephemeral, guild_only)]
-async fn url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
+async fn url(ctx: Context<'_>, url: Url, quick_leave: Option<bool>) -> Result<(), Error> {
     ctx.defer_ephemeral().await?;
 
-    _play_url(ctx, url).await
+    _play_url(ctx, url, quick_leave).await
 }
 
 #[poise::command(slash_command, ephemeral, guild_only)]
-async fn attachment(ctx: Context<'_>, file: Attachment) -> Result<(), Error> {
+async fn attachment(ctx: Context<'_>, file: Attachment, quick_leave: Option<bool>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locales should always be available for slash commands");
@@ -33,6 +33,7 @@ async fn attachment(ctx: Context<'_>, file: Attachment) -> Result<(), Error> {
             _play_url(
                 ctx,
                 Url::parse(&file.url).expect("this should be a valid url from discord"),
+                quick_leave
             )
             .await?;
         } else {
@@ -59,7 +60,7 @@ async fn attachment(ctx: Context<'_>, file: Attachment) -> Result<(), Error> {
     Ok(())
 }
 
-async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
+async fn _play_url(ctx: Context<'_>, url: Url, quick_leave: Option<bool>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locales should always be available for slash commands");
@@ -128,11 +129,15 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
         |member| (member.display_name().into_owned(), member.face()),
     );
 
-    handle
+    let mut type_map = handle
         .typemap()
         .write()
-        .await
-        .insert::<TrackRequester>(TrackRequester { name, avatar_url });
+        .await;
+    type_map.insert::<TrackRequester>(TrackRequester { name, avatar_url });
+    if quick_leave.is_some_and(|q| q) {
+        type_map.insert::<QuickLeave>(QuickLeave);
+    }
+    drop(type_map);
 
     send_application_reply(ctx, |r| {
         r.content(local_get(
