@@ -1,3 +1,7 @@
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::unwrap_used)]
+
 use commands::{music::music, reaction_roles::reaction_roles};
 use data::Database;
 use lazy_static::lazy_static;
@@ -18,7 +22,6 @@ mod data;
 mod locale;
 
 use regex::Regex;
-use songbird::SerenityInit;
 
 #[derive(Debug)]
 pub struct Data {
@@ -27,8 +30,9 @@ pub struct Data {
 }
 
 lazy_static! {
-    pub static ref ID_REGEX: Regex = Regex::new(r"rr:(\d{18})").unwrap();
-    pub static ref MIME_AUDIO_REGEX: Regex = Regex::new(r"audio/.+").unwrap();
+    pub static ref ID_REGEX: Regex = Regex::new(r"rr:(\d{18})").expect("ID_REGEX didn't compile");
+    pub static ref MIME_AUDIO_REGEX: Regex =
+        Regex::new(r"audio/.+").expect("MIME_AUDIO_REGEX didn't compile");
 }
 
 #[derive(Deserialize)]
@@ -39,7 +43,7 @@ struct Config {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), serenity::Error> {
     let config: Config = toml::from_str(
         &tokio::fs::read_to_string("config.toml")
             .await
@@ -58,13 +62,13 @@ async fn main() {
     let framework = Framework::builder()
         .token(config.token)
         .intents(GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES)
-        .client_settings(|c| c.register_songbird())
+        .client_settings(songbird::SerenityInit::register_songbird)
         .options(FrameworkOptions {
             commands: vec![reaction_roles(), music()],
             event_handler: |ctx, event, _framework, _data| {
                 Box::pin(async move {
                     if let Event::InteractionCreate { interaction } = event {
-                        handle_reaction_roles(ctx, interaction).await?
+                        handle_reaction_roles(ctx, interaction).await?;
                     }
                     Ok(())
                 })
@@ -89,15 +93,21 @@ async fn main() {
             })
         });
 
-    framework.run().await.unwrap();
+    framework.run().await
 }
 
+/// Gets a localized string based on a given key.
+///
+/// # Panics
+///
+/// Panics if the provided key doesn't exist, since it is assumed that the key is required for the bot to run.
+#[must_use]
 pub fn local_get(translator: &Translator, key: &str, locale: &str) -> String {
-    translator.get(key, locale).unwrap_or(
+    translator.get(key, locale).unwrap_or_else(|_| {
         translator
             .get(key, "en-US")
-            .unwrap_or_else(|_| panic!("key {} doesn't exist", key)),
-    )
+            .unwrap_or_else(|_| panic!("key {} doesn't exist", key))
+    })
 }
 
 async fn handle_reaction_roles(

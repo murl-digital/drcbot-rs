@@ -12,33 +12,30 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    let guild = ctx.guild().unwrap();
+    let guild = ctx.guild().expect("no guild for a guild only command?");
     let channel = guild
         .voice_states
         .get(&ctx.author().id)
         .and_then(|v| v.channel_id);
 
-    let current_channel = match channel {
-        Some(channel) => channel,
-        None => {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
-                    &ctx.data.translator,
-                    "commands_music_usernotinvc",
-                    locale,
-                ))
-            })
-            .await?;
+    let Some(current_channel) = channel else {
+        send_application_reply(ctx, |r| {
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_music_usernotinvc",
+                locale,
+            ))
+        })
+        .await?;
 
-            return Ok(());
-        }
+        return Ok(());
     };
 
     ctx.defer_ephemeral().await?;
 
     let manager = get_client(&ctx).await;
 
-    let handler_lock = manager.get(ctx.guild_id().unwrap()).unwrap();
+    let handler_lock = manager.get(guild.id).unwrap();
 
     let handler = handler_lock.lock().await;
 
@@ -48,11 +45,15 @@ pub async fn now_playing(ctx: Context<'_>) -> Result<(), Error> {
     {
         if let Some(current) = handler.queue().current() {
             let metadata = current.metadata();
-            let type_map = current.typemap().read().await;
-            let requester = type_map.get::<TrackRequester>();
+            let requester = current
+                .typemap()
+                .read()
+                .await
+                .get::<TrackRequester>()
+                .cloned();
             let color = get_color_from_thumbnail(metadata).await;
             send_application_reply(ctx, |r| {
-                r.embed(|e| make_now_playing_embed(e, metadata, color, requester))
+                r.embed(|e| make_now_playing_embed(e, metadata, color, requester.as_ref()))
             })
             .await?;
         }
@@ -75,33 +76,30 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    let guild = ctx.guild().unwrap();
+    let guild = ctx.guild().expect("no guild provided for guild only command");
     let channel = guild
         .voice_states
         .get(&ctx.author().id)
         .and_then(|v| v.channel_id);
 
-    let current_channel = match channel {
-        Some(channel) => channel,
-        None => {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
-                    &ctx.data.translator,
-                    "commands_music_usernotinvc",
-                    locale,
-                ))
-            })
-            .await?;
+    let Some(current_channel) = channel else {
+        send_application_reply(ctx, |r| {
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_music_usernotinvc",
+                locale,
+            ))
+        })
+        .await?;
 
-            return Ok(());
-        }
+        return Ok(());
     };
 
     ctx.defer_ephemeral().await?;
 
     let manager = get_client(&ctx).await;
 
-    let handler_lock = manager.get(ctx.guild_id().unwrap()).unwrap();
+    let handler_lock = manager.get(guild.id).unwrap();
 
     let handler = handler_lock.lock().await;
 
@@ -115,31 +113,29 @@ pub async fn skip(ctx: Context<'_>) -> Result<(), Error> {
                     .count();
 
                 let mut typemap = current_track.typemap().write().await;
-                let votes = match typemap.get_mut::<SkipVotes>() {
-                    Some(v) => v,
-                    None => {
-                        typemap.insert::<SkipVotes>(vec![]);
-
-                        typemap
-                            .get_mut::<SkipVotes>()
-                            .expect("skip votes was literally just inserted")
+                if let Some(votes) = typemap.get_mut::<SkipVotes>() {
+                    if !votes.contains(&ctx.author().id.0) {
+                        votes.push(ctx.author().id.0);
+                        if votes.len() == (users_in_channel / 2) {
+                            let _ = handler.queue().skip();
+                            drop(handler);
+                        }
+                        send_application_reply(ctx, |r| {
+                            r.content(local_get(
+                                &ctx.data.translator,
+                                "commands_music_controls_skip_success",
+                                locale,
+                            ))
+                        })
+                        .await?;
                     }
+                } else {
+                    typemap.insert::<SkipVotes>(vec![]);
+
+                    typemap
+                        .get_mut::<SkipVotes>()
+                        .expect("skip votes was literally just inserted");
                 };
-
-                if !votes.contains(&ctx.author().id.0) {
-                    votes.push(ctx.author().id.0);
-                    if votes.len() == (users_in_channel / 2) {
-                        let _ = handler.queue().skip();
-                    }
-                    send_application_reply(ctx, |r| {
-                        r.content(local_get(
-                            &ctx.data.translator,
-                            "commands_music_controls_skip_success",
-                            locale,
-                        ))
-                    })
-                    .await?;
-                }
             } else {
                 send_application_reply(ctx, |r| {
                     r.content(local_get(

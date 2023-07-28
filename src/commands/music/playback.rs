@@ -10,6 +10,7 @@ use crate::{local_get, Context, Error, MIME_AUDIO_REGEX};
 use super::{get_color_from_thumbnail, get_handler, make_now_playing_embed, TrackRequester};
 
 #[poise::command(slash_command, subcommands("url", "attachment"))]
+#[allow(clippy::unused_async)]
 pub async fn play(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
@@ -62,7 +63,7 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locales should always be available for slash commands");
-    let guild = ctx.guild().unwrap();
+    let guild = ctx.guild().expect("this is supposed to be guild only");
     let guild_id = guild.id;
 
     let channel = guild
@@ -70,20 +71,17 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
         .get(&ctx.author().id)
         .and_then(|v| v.channel_id);
 
-    let connect_to = match channel {
-        Some(channel) => channel,
-        None => {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
-                    &ctx.data.translator,
-                    "commands_music_usernotinvc",
-                    locale,
-                ))
-            })
-            .await?;
+    let Some(connect_to) = channel else {
+        send_application_reply(ctx, |r| {
+            r.content(local_get(
+                &ctx.data.translator,
+                "commands_music_usernotinvc",
+                locale,
+            ))
+        })
+        .await?;
 
-            return Ok(());
-        }
+        return Ok(());
     };
 
     let handler_lock = get_handler(&ctx, &guild_id, &connect_to).await?;
@@ -125,13 +123,16 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
 
     let handle = handler.enqueue_source(source.into());
 
-    let (name, avatar_url) = match ctx.author_member().await {
-        Some(member) => (member.display_name().into_owned(), member.face()),
-        None => (ctx.author().name.clone(), ctx.author().face()),
-    };
+    let (name, avatar_url) = (ctx.author_member().await).map_or_else(
+        || (ctx.author().name.clone(), ctx.author().face()),
+        |member| (member.display_name().into_owned(), member.face()),
+    );
 
-    let mut type_map = handle.typemap().write().await;
-    type_map.insert::<TrackRequester>(TrackRequester { name, avatar_url });
+    handle
+        .typemap()
+        .write()
+        .await
+        .insert::<TrackRequester>(TrackRequester { name, avatar_url });
 
     send_application_reply(ctx, |r| {
         r.content(local_get(
@@ -148,6 +149,7 @@ async fn _play_url(ctx: Context<'_>, url: Url) -> Result<(), Error> {
             if let Ok(Channel::Guild(current_channel)) = http.get_channel(current_channel.0).await {
                 let color = get_color_from_thumbnail(handle.metadata()).await;
 
+                let type_map = handle.typemap().read().await;
                 if let Err(why) = current_channel
                     .send_message(http, |m| {
                         m.add_embed(|e| {

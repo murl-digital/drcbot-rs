@@ -4,6 +4,7 @@ use poise::serenity_prelude::{GuildChannel, Message};
 use poise::{send_application_reply, Modal};
 
 #[poise::command(slash_command, subcommands("init", "add", "list", "remove"))]
+#[allow(clippy::unused_async)]
 pub async fn messages(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }

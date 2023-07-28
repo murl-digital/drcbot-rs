@@ -20,7 +20,7 @@ pub enum GetError {
 }
 
 impl Translator {
-    pub async fn new(path: &str) -> Result<Translator, InitError> {
+    pub async fn new(path: &str) -> Result<Self, InitError> {
         let file = match tokio::fs::read_to_string(path).await {
             Ok(s) => s,
             Err(why) => return Err(InitError::IO(why)),
@@ -31,19 +31,17 @@ impl Translator {
             Err(why) => return Err(InitError::Parse(why)),
         };
 
-        Ok(Translator { locales })
+        Ok(Self { locales })
     }
 
     pub fn get(&self, key: &str, locale: &str) -> Result<String, GetError> {
-        if let Some(message) = self.locales.get(key) {
-            match locale {
-                "en-US" => Ok(message.en_us.to_owned()),
-                "en-GB" => Ok(message.en_uk.to_owned()),
+        self.locales
+            .get(key)
+            .map_or(Err(GetError::NoMessage), |message| match locale {
+                "en-US" => Ok(message.en_us.clone()),
+                "en-GB" => Ok(message.en_uk.clone()),
                 _ => Err(GetError::NoLocale),
-            }
-        } else {
-            Err(GetError::NoMessage)
-        }
+            })
     }
 }
 

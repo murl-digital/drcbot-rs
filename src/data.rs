@@ -28,8 +28,8 @@ pub struct ReactionRolesMessage {
 }
 
 impl Database {
-    pub fn new(client: Client, database: String) -> Database {
-        Database { client, database }
+    pub const fn new(client: Client, database: String) -> Self {
+        Self { client, database }
     }
 
     pub async fn get_index(

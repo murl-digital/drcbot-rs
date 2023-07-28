@@ -7,11 +7,13 @@ use poise::{
 use crate::{commands::reaction_roles::RoleButton, local_get, Context, Error, ID_REGEX};
 
 #[poise::command(slash_command, subcommands("add", "remove"))]
+#[allow(clippy::unused_async)]
 pub async fn roles(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
 
 #[poise::command(slash_command, ephemeral, guild_only)]
+#[allow(clippy::too_many_lines)]
 async fn add(
     ctx: Context<'_>,
     role: Role,
@@ -44,34 +46,28 @@ async fn add(
     let mut buttons = vec![];
 
     for component in components {
-        let button = match component {
-            ActionRowComponent::Button(b) => b,
-            _ => {
-                send_application_reply(ctx, |r| {
-                    r.content(local_get(
-                        &ctx.data.translator,
-                        "commands_reactionroles_roles_add_probablynoindex",
-                        locale,
-                    ))
-                })
-                .await?;
-                return Ok(());
-            }
+        let ActionRowComponent::Button(button) = component else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_add_probablynoindex",
+                    locale,
+                ))
+            })
+            .await?;
+            return Ok(());
         };
 
-        let id = match button.custom_id {
-            Some(id) => id,
-            None => {
-                send_application_reply(ctx, |r| {
-                    r.content(local_get(
-                        &ctx.data.translator,
-                        "commands_reactionroles_roles_add_noindex",
-                        locale,
-                    ))
-                })
-                .await?;
-                return Ok(());
-            }
+        let Some(id) = button.custom_id else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_add_noindex",
+                    locale,
+                ))
+            })
+            .await?;
+            return Ok(());
         };
 
         if !ID_REGEX.is_match(&id) {
@@ -86,26 +82,23 @@ async fn add(
             return Ok(());
         }
 
-        let label = match button.label {
-            Some(l) => l,
-            None => {
-                send_application_reply(ctx, |r| {
-                    r.content(local_get(
-                        &ctx.data.translator,
-                        "commands_reactionroles_roles_add_noindex",
-                        locale,
-                    ))
-                })
-                .await?;
-                return Ok(());
-            }
+        let Some(label) = button.label else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_add_noindex",
+                    locale,
+                ))
+            })
+            .await?;
+            return Ok(());
         };
 
         buttons.push(RoleButton {
             id,
             label,
             emoji: button.emoji,
-        })
+        });
     }
 
     buttons.push(RoleButton {
@@ -155,6 +148,7 @@ async fn add(
 }
 
 #[poise::command(slash_command, ephemeral, guild_only)]
+#[allow(clippy::too_many_lines)]
 async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<(), Error> {
     let locale = ctx
         .locale()
@@ -182,34 +176,28 @@ async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<()
     let mut buttons = vec![];
 
     for component in components {
-        let button = match component {
-            ActionRowComponent::Button(b) => b,
-            _ => {
-                send_application_reply(ctx, |r| {
-                    r.content(local_get(
-                        &ctx.data.translator,
-                        "commands_reactionroles_roles_remove_probablynoindex",
-                        locale,
-                    ))
-                })
-                .await?;
-                return Ok(());
-            }
+        let ActionRowComponent::Button(button) = component else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_remove_probablynoindex",
+                    locale,
+                ))
+            })
+            .await?;
+            return Ok(());
         };
 
-        let id = match button.custom_id {
-            Some(id) => id,
-            None => {
-                send_application_reply(ctx, |r| {
-                    r.content(local_get(
-                        &ctx.data.translator,
-                        "commands_reactionroles_roles_remove_noindex",
-                        locale,
-                    ))
-                })
-                .await?;
-                return Ok(());
-            }
+        let Some(id) = button.custom_id else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_remove_noindex",
+                    locale,
+                ))
+            })
+            .await?;
+            return Ok(());
         };
 
         if !ID_REGEX.is_match(&id) {
@@ -224,26 +212,23 @@ async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<()
             return Ok(());
         }
 
-        let label = match button.label {
-            Some(l) => l,
-            None => {
-                send_application_reply(ctx, |r| {
-                    r.content(local_get(
-                        &ctx.data.translator,
-                        "commands_reactionroles_roles_remove_noindex",
-                        locale,
-                    ))
-                })
-                .await?;
-                return Ok(());
-            }
+        let Some(label) = button.label else {
+            send_application_reply(ctx, |r| {
+                r.content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_roles_remove_noindex",
+                    locale,
+                ))
+            })
+            .await?;
+            return Ok(());
         };
 
         buttons.push(RoleButton {
             id,
             label,
             emoji: button.emoji,
-        })
+        });
     }
 
     buttons.retain(|b| {
@@ -290,14 +275,14 @@ async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<()
         })
         .await?;
 
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
-                &ctx.data.translator,
-                "commands_reactionroles_roles_remove_success",
-                locale,
-            ))
-        })
-        .await?;
+    send_application_reply(ctx, |r| {
+        r.content(local_get(
+            &ctx.data.translator,
+            "commands_reactionroles_roles_remove_success",
+            locale,
+        ))
+    })
+    .await?;
 
     Ok(())
 }

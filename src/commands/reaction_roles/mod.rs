@@ -1,7 +1,7 @@
 use poise::serenity_prelude::{EmbedMessageBuilding, MessageBuilder, ReactionType};
 
-use crate::commands::reaction_roles::messages::*;
-use crate::commands::reaction_roles::roles::*;
+use crate::commands::reaction_roles::messages::messages;
+use crate::commands::reaction_roles::roles::roles;
 use crate::{Context, Error};
 
 mod messages;
@@ -20,6 +20,7 @@ struct RoleButton {
     guild_only,
     rename = "reaction-roles"
 )]
+#[allow(clippy::unused_async)]
 pub async fn reaction_roles(_: Context<'_>) -> Result<(), Error> {
     Ok(())
 }
