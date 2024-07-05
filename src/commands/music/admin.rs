@@ -1,4 +1,4 @@
-use poise::send_application_reply;
+use poise::{send_application_reply, CreateReply};
 
 use crate::{commands::music::get_client, local_get, Context, Error};
 
@@ -19,20 +19,20 @@ async fn force_skip(ctx: Context<'_>) -> Result<(), Error> {
         .expect("locale should always be available for slash commands");
     let guild = ctx
         .guild()
-        .expect("no guild provided for a guild only command");
+        .expect("no guild provided for a guild only command")
+        .clone();
     let channel = guild
         .voice_states
         .get(&ctx.author().id)
         .and_then(|v| v.channel_id);
 
     let Some(current_channel) = channel else {
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_usernotinvc",
                 locale,
             ))
-        })
+        )
         .await?;
 
         return Ok(());
@@ -48,27 +48,25 @@ async fn force_skip(ctx: Context<'_>) -> Result<(), Error> {
 
     if handler
         .current_channel()
-        .is_some_and(|c| c.0 == current_channel.0)
+        .is_some_and(|c| c == current_channel.into())
     {
         let _ = handler.queue().skip();
         drop(handler);
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_admin_forceskip_success",
                 locale,
             ))
-        })
+        )
         .await?;
     } else {
         drop(handler);
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_notwithbot",
                 locale,
             ))
-        })
+        )
         .await?;
     }
 
@@ -80,20 +78,19 @@ async fn stop(ctx: Context<'_>, leave: Option<bool>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    let guild = ctx.guild().expect("no guild for guild only command");
+    let guild = ctx.guild().expect("no guild for guild only command").clone();
     let channel = guild
         .voice_states
         .get(&ctx.author().id)
         .and_then(|v| v.channel_id);
 
     let Some(current_channel) = channel else {
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_usernotinvc",
                 locale,
             ))
-        })
+        )
         .await?;
 
         return Ok(());
@@ -109,30 +106,28 @@ async fn stop(ctx: Context<'_>, leave: Option<bool>) -> Result<(), Error> {
 
     if handler
         .current_channel()
-        .is_some_and(|c| c.0 == current_channel.0)
+        .is_some_and(|c| c.0 == current_channel.into())
     {
         handler.queue().stop();
         if leave.unwrap_or(false) {
             handler.leave().await?;
         }
         drop(handler);
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_admin_stop_success",
                 locale,
             ))
-        })
+        )
         .await?;
     } else {
         drop(handler);
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_notwithbot",
                 locale,
             ))
-        })
+        )
         .await?;
     }
 

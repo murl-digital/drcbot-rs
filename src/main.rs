@@ -4,15 +4,15 @@
 
 use commands::{music::music, reaction_roles::reaction_roles};
 use data::Database;
-use lazy_static::lazy_static;
 use locale::Translator;
 use mongodb::Client;
 use poise::builtins::register_globally;
-use poise::serenity_prelude::{GatewayIntents, Interaction, MessageBuilder};
+use poise::serenity_prelude::{CreateInteractionResponseFollowup, Event, FullEvent, GatewayIntents, Interaction, MessageBuilder, Role, RoleId};
 use poise::{serenity_prelude as serenity, ApplicationContext, FrameworkError};
-use poise::{Event, Framework, FrameworkOptions};
+use poise::{Framework, FrameworkOptions};
 use serde::Deserialize;
-use std::sync::Arc;
+use songbird::SerenityInit;
+use std::sync::{Arc, LazyLock};
 
 pub type Context<'a> = ApplicationContext<'a, Data, Error>;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -29,11 +29,9 @@ pub struct Data {
     pub translator: Arc<Translator>,
 }
 
-lazy_static! {
-    pub static ref ID_REGEX: Regex = Regex::new(r"rr:(\d{18})").expect("ID_REGEX didn't compile");
-    pub static ref MIME_AUDIO_REGEX: Regex =
-        Regex::new(r"audio/.+").expect("MIME_AUDIO_REGEX didn't compile");
-}
+
+pub static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"rr:(\d{18})").expect("ID_REGEX didn't compile"));
+pub static MIME_AUDIO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"audio/.+").expect("MIME_AUDIO_REGEX didn't compile"));
 
 #[derive(Deserialize)]
 struct Config {
@@ -44,6 +42,8 @@ struct Config {
 
 #[tokio::main]
 async fn main() -> Result<(), serenity::Error> {
+    tracing_subscriber::fmt::init();
+
     let config: Config = toml::from_str(
         &tokio::fs::read_to_string("config.toml")
             .await
@@ -60,14 +60,11 @@ async fn main() -> Result<(), serenity::Error> {
         .expect("problem connecting to mongodb");
 
     let framework = Framework::builder()
-        .token(config.token)
-        .intents(GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES)
-        .client_settings(songbird::SerenityInit::register_songbird)
         .options(FrameworkOptions {
             commands: vec![reaction_roles(), music()],
             event_handler: |ctx, event, _framework, _data| {
                 Box::pin(async move {
-                    if let Event::InteractionCreate { interaction } = event {
+                    if let FullEvent::InteractionCreate { interaction }  = event {
                         handle_reaction_roles(ctx, interaction).await?;
                     }
                     Ok(())
@@ -75,9 +72,8 @@ async fn main() -> Result<(), serenity::Error> {
             },
             on_error: |err| {
                 Box::pin(async move {
-                    if let FrameworkError::Command { error, ctx } = err {
-                        println!("error running command: {:?}", error);
-                        println!("context for debugging: {:?}", ctx);
+                    if let FrameworkError::Command { error, ctx, .. } = err {
+                        tracing::error!("error running command: {error:?} \n context for debugging: {ctx:?}");
                     }
                 })
             },
@@ -91,9 +87,12 @@ async fn main() -> Result<(), serenity::Error> {
                     translator: Arc::new(translator),
                 })
             })
-        });
+        })
+        .build();
 
-    framework.run().await
+    let mut client = serenity::ClientBuilder::new(config.token, GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES).register_songbird().framework(framework).await?;
+
+    client.start().await
 }
 
 /// Gets a localized string based on a given key.
@@ -118,32 +117,31 @@ async fn handle_reaction_roles(
         component.defer(&ctx.http).await?;
 
         if let Some(captures) = ID_REGEX.captures(&component.data.custom_id) {
-            if let Ok(parsed) = captures[1].parse() {
-                let role_id = serenity::RoleId(parsed);
+            if let Ok(role_id) = captures[1].parse::<RoleId>() {
                 if let Some(ref mut member) = component.member {
                     if member.roles.iter().any(|r| r == &role_id) {
                         member.remove_role(&ctx, &role_id).await?;
                         component
-                            .create_followup_message(&ctx, |r| {
-                                r.ephemeral(true).content(
+                            .create_followup(&ctx, CreateInteractionResponseFollowup::new().ephemeral(true).content(
                                     MessageBuilder::new()
                                         .push("you no longer have the ")
                                         .role(role_id)
-                                        .push(" role"),
-                                )
-                            })
+                                        .push(" role")
+                                        .build()
+                            ))
                             .await?;
                     } else {
                         member.add_role(&ctx, &role_id).await?;
                         component
-                            .create_followup_message(&ctx, |r| {
-                                r.ephemeral(true).content(
+                            .create_followup(&ctx, CreateInteractionResponseFollowup::new().
+                                ephemeral(true).content(
                                     MessageBuilder::new()
                                         .push("you got the ")
                                         .role(role_id)
-                                        .push(" role"),
+                                        .push(" role")
+                                        .build()
                                 )
-                            })
+                            )
                             .await?;
                     }
                 }

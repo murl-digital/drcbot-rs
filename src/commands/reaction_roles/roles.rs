@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use poise::{
     send_application_reply,
-    serenity_prelude::{ActionRowComponent, Message, ReactionType, Role},
+    serenity_prelude::{ActionRowComponent, ButtonKind, CreateActionRow, CreateButton, EditMessage, Message, ReactionType, Role}, CreateReply,
 };
 
 use crate::{commands::reaction_roles::RoleButton, local_get, Context, Error, ID_REGEX};
@@ -24,14 +24,13 @@ async fn add(
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    if message.author.id != ctx.serenity_context().cache.current_user_id() {
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+    if message.author.id != ctx.serenity_context().cache.current_user().id {
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_reactionroles_add_notsentbybot",
                 locale,
             ))
-        })
+        )
         .await?;
 
         return Ok(());
@@ -47,55 +46,51 @@ async fn add(
 
     for component in components {
         let ActionRowComponent::Button(button) = component else {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_add_probablynoindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         };
 
-        let Some(id) = button.custom_id else {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+        let ButtonKind::NonLink { custom_id, style } = button.data else {
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_add_noindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         };
 
-        if !ID_REGEX.is_match(&id) {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+        if !ID_REGEX.is_match(&custom_id) {
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_add_noindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         }
 
         let Some(label) = button.label else {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_add_noindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         };
 
         buttons.push(RoleButton {
-            id,
+            id: custom_id,
             label,
             emoji: button.emoji,
         });
@@ -108,40 +103,25 @@ async fn add(
     });
 
     message
-        .edit(&ctx.serenity_context, |e| {
-            e.components(|c| {
-                for row in &buttons.iter().chunks(5) {
-                    c.create_action_row(|r| {
-                        for b in row {
-                            r.create_button(|bt| {
-                                bt.style(poise::serenity_prelude::ButtonStyle::Secondary)
-                                    .custom_id(b.id.clone())
-                                    .label(b.label.clone());
+        .edit(&ctx.serenity_context, EditMessage::new().components(buttons.iter().chunks(5).into_iter().map(|c| CreateActionRow::Buttons(c.map(|b| {
+            let mut bt = CreateButton::new(b.id.to_owned())
+                .style(poise::serenity_prelude::ButtonStyle::Secondary)
+                .label(b.label.clone());
 
-                                if let Some(emoji) = b.emoji.clone() {
-                                    bt.emoji(emoji);
-                                }
+            if let Some(emoji) = b.emoji.clone() {
+                bt = bt.emoji(emoji);
+            }
 
-                                bt
-                            });
-                        }
-
-                        r
-                    });
-                }
-
-                c
-            })
-        })
+            bt
+        }).collect())).collect()))
         .await?;
 
-    send_application_reply(ctx, |r| {
-        r.content(local_get(
+    send_application_reply(ctx, CreateReply::default().content(local_get(
             &ctx.data.translator,
             "commands_reactionroles_roles_add_success",
             locale,
         ))
-    })
+    )
     .await?;
 
     Ok(())
@@ -154,14 +134,13 @@ async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<()
         .locale()
         .expect("locale should always be available for slash commands");
 
-    if message.author.id != ctx.serenity_context().cache.current_user_id() {
-        send_application_reply(ctx, |r| {
-            r.content(local_get(
+    if message.author.id != ctx.serenity_context().cache.current_user().id {
+        send_application_reply(ctx, CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_reactionroles_remove_notsentbybot",
                 locale,
             ))
-        })
+        )
         .await?;
 
         return Ok(());
@@ -177,55 +156,51 @@ async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<()
 
     for component in components {
         let ActionRowComponent::Button(button) = component else {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_remove_probablynoindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         };
 
-        let Some(id) = button.custom_id else {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+        let ButtonKind::NonLink { custom_id, style } = button.data else {
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_remove_noindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         };
 
-        if !ID_REGEX.is_match(&id) {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+        if !ID_REGEX.is_match(&custom_id) {
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_remove_noindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         }
 
         let Some(label) = button.label else {
-            send_application_reply(ctx, |r| {
-                r.content(local_get(
+            send_application_reply(ctx, CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_roles_remove_noindex",
                     locale,
                 ))
-            })
+            )
             .await?;
             return Ok(());
         };
 
         buttons.push(RoleButton {
-            id,
+            id: custom_id,
             label,
             emoji: button.emoji,
         });
@@ -241,47 +216,32 @@ async fn remove(ctx: Context<'_>, role: Role, mut message: Message) -> Result<()
             .as_str()
             .parse::<u64>()
         {
-            role.id.0 != parsed
+            role.id != parsed
         } else {
             false
         }
     });
 
     message
-        .edit(&ctx.serenity_context, |e| {
-            e.components(|c| {
-                for row in &buttons.iter().chunks(5) {
-                    c.create_action_row(|r| {
-                        for b in row {
-                            r.create_button(|bt| {
-                                bt.style(poise::serenity_prelude::ButtonStyle::Secondary)
-                                    .custom_id(b.id.clone())
-                                    .label(b.label.clone());
+        .edit(&ctx.serenity_context, EditMessage::new().components(buttons.iter().chunks(5).into_iter().map(|c| CreateActionRow::Buttons(c.map(|b| {
+            let mut bt = CreateButton::new(b.id.to_owned())
+                .style(poise::serenity_prelude::ButtonStyle::Secondary)
+                .label(b.label.clone());
 
-                                if let Some(emoji) = b.emoji.clone() {
-                                    bt.emoji(emoji);
-                                }
+            if let Some(emoji) = b.emoji.clone() {
+                bt = bt.emoji(emoji);
+            }
 
-                                bt
-                            });
-                        }
-
-                        r
-                    });
-                }
-
-                c
-            })
-        })
+            bt
+        }).collect())).collect()))
         .await?;
 
-    send_application_reply(ctx, |r| {
-        r.content(local_get(
+    send_application_reply(ctx, CreateReply::default().content(local_get(
             &ctx.data.translator,
             "commands_reactionroles_roles_remove_success",
             locale,
         ))
-    })
+    )
     .await?;
 
     Ok(())

@@ -38,9 +38,9 @@ impl Database {
     ) -> Result<Option<ReactionRolesIndex>, mongodb::error::Error> {
         let db = self.client.database(&self.database);
         let collection = db.collection("reactionRolesIndices");
-        let filter = doc! { "guild_id":  guild_id.0.to_string() };
+        let filter = doc! { "guild_id":  guild_id.to_string() };
 
-        collection.find_one(filter, None).await
+        collection.find_one(filter).await
     }
 
     pub async fn save_index(
@@ -60,7 +60,6 @@ impl Database {
                     message_id,
                     messages: vec![],
                 },
-                None,
             )
             .await
     }
@@ -71,8 +70,8 @@ impl Database {
     ) -> Result<UpdateResult, mongodb::error::Error> {
         let db = self.client.database(&self.database);
         let collection = db.collection::<ReactionRolesIndex>("reactionRolesIndices");
-        let query = doc! { "guild_id": index.guild_id.0.to_string() };
+        let query = doc! { "guild_id": index.guild_id.to_string() };
 
-        collection.replace_one(query, index, None).await
+        collection.replace_one(query, index).await
     }
 }

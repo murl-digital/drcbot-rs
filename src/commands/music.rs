@@ -10,9 +10,10 @@ use tokio::sync::Mutex;
 use crate::serenity::async_trait;
 use poise::{
     send_application_reply,
-    serenity_prelude::{Channel, ChannelId, CreateEmbed, GuildId, Http, TypeMapKey},
+    serenity_prelude::{Channel, ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, GuildId, Http}, CreateReply,
 };
-use songbird::{input::Metadata, Call, Event, EventContext, EventHandler, Songbird};
+use poise::serenity_prelude::prelude::TypeMapKey;
+use songbird::{input::{AuxMetadata, Metadata}, Call, Event, EventContext, EventHandler, Songbird};
 
 use crate::{
     commands::music::{
@@ -45,6 +46,12 @@ impl TypeMapKey for TrackRequester {
     type Value = Self;
 }
 
+struct TrackMetadata;
+
+impl TypeMapKey for TrackMetadata {
+    type Value = AuxMetadata;
+}
+
 #[poise::command(slash_command, subcommands("now_playing", "skip", "play", "admin"))]
 #[allow(clippy::unused_async)]
 pub async fn music(_: Context<'_>) -> Result<(), Error> {
@@ -57,9 +64,9 @@ async fn get_client(ctx: &Context<'_>) -> Arc<Songbird> {
     if let Some(client) = songbird::get(ctx.serenity_context).await {
         client
     } else {
-        println!("no songbird client exists, i will now cease to exist");
+        tracing::error!("no songbird client exists, i will now cease to exist");
         // this is ignored because the bots about to crash, so this doesnt matter
-        let _ = send_application_reply(*ctx, |r| r.content("Something has gone wrong internally. In fact, it's so bad that I'm going to crash after I send this message. Oops!")).await;
+        let _ = send_application_reply(*ctx, CreateReply::default().content("Something has gone wrong internally. In fact, it's so bad that I'm going to crash after I send this message. Oops!")).await;
         panic!();
     }
 }
@@ -76,19 +83,14 @@ async fn get_handler(
             let lock = handler.lock().await;
             if lock.current_channel().is_none() {
                 drop(lock);
-                let (lock, result) = manager.join(*guild_id, *connect_to).await;
-
-                match result {
-                    Ok(()) => lock,
-                    Err(why) => return Err(why.into()),
-                }
+                manager.join(*guild_id, *connect_to).await?
             } else {
                 drop(lock);
                 handler
             }
         }
     } else {
-        let (handler, result) = manager.join(*guild_id, *connect_to).await;
+        let handler = manager.join(*guild_id, *connect_to).await?;
 
         {
             let mut lock = handler.lock().await;
@@ -118,16 +120,13 @@ async fn get_handler(
             );
         }
 
-        match result {
-            Ok(()) => handler,
-            Err(why) => return Err(why.into()),
-        }
+        handler
     };
 
     Ok(handler_lock)
 }
 
-async fn get_color_from_thumbnail(metadata: &Metadata) -> Option<RGB<u8>> {
+async fn get_color_from_thumbnail(metadata: &AuxMetadata) -> Option<RGB<u8>> {
     match metadata.thumbnail.clone() {
         Some(t) => {
             if let Ok(response) = reqwest::get(t).await {
@@ -163,13 +162,12 @@ fn saturation_from_rgb(r: u8, g: u8, b: u8) -> f64 {
     }
 }
 
-fn make_now_playing_embed<'_0>(
-    embed: &'_0 mut CreateEmbed,
-    metadata: &Metadata,
+fn make_now_playing_embed(
+    metadata: &AuxMetadata,
     color: Option<RGB<u8>>,
     requester: Option<&TrackRequester>,
-) -> &'_0 mut CreateEmbed {
-    embed
+) -> CreateEmbed {
+    let mut embed = CreateEmbed::new()
         .title("Now Playing:")
         .thumbnail(
             metadata
@@ -197,14 +195,11 @@ fn make_now_playing_embed<'_0>(
         .timestamp(Utc::now());
 
     if let Some(color) = color {
-        embed.color((color.r, color.g, color.b));
+        embed = embed.color((color.r, color.g, color.b));
     }
 
     if let Some(requester) = requester {
-        embed.footer(|f| {
-            f.icon_url(requester.avatar_url.clone())
-                .text(format!("Requested by {}", requester.name))
-        });
+        embed = embed.footer(CreateEmbedFooter::new(format!("Requested by {}", requester.name)).icon_url(requester.avatar_url.clone()));
     }
 
     embed
@@ -226,20 +221,19 @@ impl EventHandler for NowPlaying {
             let np = handler.queue().current()?;
             let channel_id = handler.current_channel()?;
             drop(handler);
-            if let Channel::Guild(channel) = self.http.get_channel(channel_id.0).await.ok()? {
-                let metadata = np.metadata();
+            if let Channel::Guild(channel) = self.http.get_channel(channel_id.0.into()).await.ok()? {
+                let typemap = np.typemap().read().await;
+                let metadata = typemap.get::<TrackMetadata>().expect("tracks should ALWAYS have metadata");
                 let color = get_color_from_thumbnail(metadata).await;
-                let requester = np.typemap().read().await.get::<TrackRequester>().cloned();
+                let requester = typemap.get::<TrackRequester>();
 
                 if let Err(why) = channel
-                    .send_message(&self.http, |r| {
-                        r.add_embed(|e| {
-                            make_now_playing_embed(e, metadata, color, requester.as_ref())
-                        })
-                    })
+                    .send_message(&self.http, CreateMessage::new().
+                        add_embed(make_now_playing_embed(metadata, color, requester))
+                    )
                     .await
                 {
-                    println!("Error sending now playing message: {:?}", why);
+                    tracing::warn!("Error sending now playing message: {:?}", why);
                 }
             }
         }
