@@ -25,3 +25,6 @@ reqwest = "0.11"
 image = "0.25"
 color-thief = "0.2"
 symphonia = { version = "0.5", features = ["all", "opt-simd"] }
+tracing-journald = "0.3.0"
+anyhow = "1.0.86"
+thiserror = "1.0.61"

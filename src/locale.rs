@@ -1,5 +1,7 @@
+use core::error;
 use std::collections::HashMap;
 
+use thiserror::Error;
 use serde::Deserialize;
 
 #[derive(Debug)]
@@ -7,9 +9,11 @@ pub struct Translator {
     locales: HashMap<String, Locale>,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum InitError {
+    #[error("couldn't read io from disk: {0}")]
     IO(std::io::Error),
+    #[error("couldn't parse locale file: {0}")]
     Parse(toml::de::Error),
 }
 

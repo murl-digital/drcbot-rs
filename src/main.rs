@@ -15,6 +15,9 @@ use poise::{serenity_prelude as serenity, ApplicationContext, FrameworkError};
 use poise::{Framework, FrameworkOptions};
 use serde::Deserialize;
 use songbird::SerenityInit;
+use thiserror::Error;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 use std::sync::{Arc, LazyLock};
 
 pub type Context<'a> = ApplicationContext<'a, Data, Error>;
@@ -44,24 +47,35 @@ struct Config {
     mongodb_database: String,
 }
 
+#[derive(Error, Debug)]
+enum StartupError {
+    #[error("can't connect to journald for logging: {0}")]
+    JournaldConnection(std::io::Error),
+    #[error("problem reading config file from disk: {0}")]
+    ReadConfig(std::io::Error),
+    #[error("problem parsing config: {0}")]
+    ParseConfig(toml::de::Error),
+    #[error("problem initializing translator: {0}")]
+    InitTranslator(locale::InitError),
+    #[error("problem connecting to database: {0}")]
+    Database(mongodb::error::Error)
+}
+
 #[tokio::main]
-async fn main() -> Result<(), serenity::Error> {
-    tracing_subscriber::fmt::init();
+async fn main() -> Result<(), anyhow::Error> {
+    tracing_subscriber::registry().with(tracing_journald::layer().map_err(StartupError::JournaldConnection)?).init();
 
     let config: Config = toml::from_str(
-        &tokio::fs::read_to_string("config.toml")
-            .await
-            .expect("config doesn't exist"),
-    )
-    .expect("invalid config");
+        &tokio::fs::read_to_string("config.toml").await.map_err(StartupError::ReadConfig)?
+    ).map_err(StartupError::ParseConfig)?;
 
     let translator = Translator::new("locale.toml")
         .await
-        .expect("translator required for working bot");
+        .map_err(StartupError::InitTranslator)?;
 
     let mongo_client = Client::with_uri_str(config.mongodb_url)
         .await
-        .expect("problem connecting to mongodb");
+        .map_err(StartupError::Database)?;
 
     let framework = Framework::builder()
         .options(FrameworkOptions {
@@ -104,7 +118,7 @@ async fn main() -> Result<(), serenity::Error> {
     .framework(framework)
     .await?;
 
-    client.start().await
+    Ok(client.start().await?)
 }
 
 /// Gets a localized string based on a given key.
