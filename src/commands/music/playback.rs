@@ -1,8 +1,9 @@
-use std::{cell::LazyCell, sync::LazyLock};
+use std::sync::LazyLock;
 
 use poise::{
     send_application_reply,
-    serenity_prelude::{Attachment, Channel, CreateMessage}, CreateReply,
+    serenity_prelude::{Attachment, Channel, CreateMessage},
+    CreateReply,
 };
 use reqwest::Client;
 use songbird::input::{Compose, YoutubeDl};
@@ -46,20 +47,24 @@ async fn attachment(
             )
             .await?;
         } else {
-            send_application_reply(ctx, CreateReply::default().content(local_get(
+            send_application_reply(
+                ctx,
+                CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_music_playback_attachment_notaudio",
                     locale,
-                ))
+                )),
             )
             .await?;
         }
     } else {
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_playback_attachment_nocontenttype",
                 locale,
-            ))
+            )),
         )
         .await?;
     }
@@ -73,7 +78,10 @@ async fn _play_url(ctx: Context<'_>, url: Url, quick_leave: Option<bool>) -> Res
     let locale = ctx
         .locale()
         .expect("locales should always be available for slash commands");
-    let guild = ctx.guild().expect("this is supposed to be guild only").clone();
+    let guild = ctx
+        .guild()
+        .expect("this is supposed to be guild only")
+        .clone();
     let guild_id = guild.id;
 
     let channel = guild
@@ -82,11 +90,13 @@ async fn _play_url(ctx: Context<'_>, url: Url, quick_leave: Option<bool>) -> Res
         .and_then(|v| v.channel_id);
 
     let Some(connect_to) = channel else {
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_usernotinvc",
                 locale,
-            ))
+            )),
         )
         .await?;
 
@@ -99,11 +109,13 @@ async fn _play_url(ctx: Context<'_>, url: Url, quick_leave: Option<bool>) -> Res
 
     if let Some(current_channel) = handler.current_channel() {
         if current_channel != connect_to.into() {
-            send_application_reply(ctx, CreateReply::default().content(local_get(
+            send_application_reply(
+                ctx,
+                CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_music_alreadyinvc",
                     locale,
-                ))
+                )),
             )
             .await?;
 
@@ -150,31 +162,37 @@ async fn _play_url(ctx: Context<'_>, url: Url, quick_leave: Option<bool>) -> Res
 
     drop(type_map);
 
-    send_application_reply(ctx, CreateReply::default().content(local_get(
+    send_application_reply(
+        ctx,
+        CreateReply::default().content(local_get(
             &ctx.data.translator,
             "commands_music_playback_queued",
             locale,
-        ))
+        )),
     )
     .await?;
 
     if handler.queue().len() == 1 {
         let http = ctx.serenity_context.http.clone();
         if let Some(current_channel) = handler.current_channel() {
-            if let Ok(Channel::Guild(current_channel)) = http.get_channel(current_channel.0.into()).await {
+            if let Ok(Channel::Guild(current_channel)) =
+                http.get_channel(current_channel.0.into()).await
+            {
                 let type_map = handle.typemap().read().await;
-                let metadata = type_map.get::<TrackMetadata>().expect("metadata MUST be available at this point");
-
+                let metadata = type_map
+                    .get::<TrackMetadata>()
+                    .expect("metadata MUST be available at this point");
 
                 let color = get_color_from_thumbnail(metadata).await;
 
                 if let Err(why) = current_channel
-                    .send_message(http, CreateMessage::new().add_embed(make_now_playing_embed(
-                                metadata,
-                                color,
-                                type_map.get::<TrackRequester>(),
-                            )
-                        )
+                    .send_message(
+                        http,
+                        CreateMessage::new().add_embed(make_now_playing_embed(
+                            metadata,
+                            color,
+                            type_map.get::<TrackRequester>(),
+                        )),
                     )
                     .await
                 {

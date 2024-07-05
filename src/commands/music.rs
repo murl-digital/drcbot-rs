@@ -8,12 +8,15 @@ use std::{sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
 use crate::serenity::async_trait;
+use poise::serenity_prelude::prelude::TypeMapKey;
 use poise::{
     send_application_reply,
-    serenity_prelude::{Channel, ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, GuildId, Http}, CreateReply,
+    serenity_prelude::{
+        Channel, ChannelId, CreateEmbed, CreateEmbedFooter, CreateMessage, GuildId, Http,
+    },
+    CreateReply,
 };
-use poise::serenity_prelude::prelude::TypeMapKey;
-use songbird::{input::{AuxMetadata, Metadata}, Call, Event, EventContext, EventHandler, Songbird};
+use songbird::{input::AuxMetadata, Call, Event, EventContext, EventHandler, Songbird};
 
 use crate::{
     commands::music::{
@@ -199,7 +202,10 @@ fn make_now_playing_embed(
     }
 
     if let Some(requester) = requester {
-        embed = embed.footer(CreateEmbedFooter::new(format!("Requested by {}", requester.name)).icon_url(requester.avatar_url.clone()));
+        embed = embed.footer(
+            CreateEmbedFooter::new(format!("Requested by {}", requester.name))
+                .icon_url(requester.avatar_url.clone()),
+        );
     }
 
     embed
@@ -221,16 +227,20 @@ impl EventHandler for NowPlaying {
             let np = handler.queue().current()?;
             let channel_id = handler.current_channel()?;
             drop(handler);
-            if let Channel::Guild(channel) = self.http.get_channel(channel_id.0.into()).await.ok()? {
+            if let Channel::Guild(channel) =
+                self.http.get_channel(channel_id.0.into()).await.ok()?
+            {
                 let typemap = np.typemap().read().await;
-                let metadata = typemap.get::<TrackMetadata>().expect("tracks should ALWAYS have metadata");
+                let metadata = typemap
+                    .get::<TrackMetadata>()
+                    .expect("tracks should ALWAYS have metadata");
                 let color = get_color_from_thumbnail(metadata).await;
                 let requester = typemap.get::<TrackRequester>();
+                let embed = make_now_playing_embed(metadata, color, requester);
+                drop(typemap);
 
                 if let Err(why) = channel
-                    .send_message(&self.http, CreateMessage::new().
-                        add_embed(make_now_playing_embed(metadata, color, requester))
-                    )
+                    .send_message(&self.http, CreateMessage::new().add_embed(embed))
                     .await
                 {
                     tracing::warn!("Error sending now playing message: {:?}", why);

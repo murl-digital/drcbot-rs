@@ -27,11 +27,13 @@ async fn force_skip(ctx: Context<'_>) -> Result<(), Error> {
         .and_then(|v| v.channel_id);
 
     let Some(current_channel) = channel else {
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_usernotinvc",
                 locale,
-            ))
+            )),
         )
         .await?;
 
@@ -52,20 +54,24 @@ async fn force_skip(ctx: Context<'_>) -> Result<(), Error> {
     {
         let _ = handler.queue().skip();
         drop(handler);
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_admin_forceskip_success",
                 locale,
-            ))
+            )),
         )
         .await?;
     } else {
         drop(handler);
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_notwithbot",
                 locale,
-            ))
+            )),
         )
         .await?;
     }
@@ -78,18 +84,23 @@ async fn stop(ctx: Context<'_>, leave: Option<bool>) -> Result<(), Error> {
     let locale = ctx
         .locale()
         .expect("locale should always be available for slash commands");
-    let guild = ctx.guild().expect("no guild for guild only command").clone();
+    let guild = ctx
+        .guild()
+        .expect("no guild for guild only command")
+        .clone();
     let channel = guild
         .voice_states
         .get(&ctx.author().id)
         .and_then(|v| v.channel_id);
 
     let Some(current_channel) = channel else {
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_usernotinvc",
                 locale,
-            ))
+            )),
         )
         .await?;
 
@@ -113,20 +124,24 @@ async fn stop(ctx: Context<'_>, leave: Option<bool>) -> Result<(), Error> {
             handler.leave().await?;
         }
         drop(handler);
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_admin_stop_success",
                 locale,
-            ))
+            )),
         )
         .await?;
     } else {
         drop(handler);
-        send_application_reply(ctx, CreateReply::default().content(local_get(
+        send_application_reply(
+            ctx,
+            CreateReply::default().content(local_get(
                 &ctx.data.translator,
                 "commands_music_notwithbot",
                 locale,
-            ))
+            )),
         )
         .await?;
     }

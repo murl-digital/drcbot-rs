@@ -7,7 +7,10 @@ use data::Database;
 use locale::Translator;
 use mongodb::Client;
 use poise::builtins::register_globally;
-use poise::serenity_prelude::{CreateInteractionResponseFollowup, Event, FullEvent, GatewayIntents, Interaction, MessageBuilder, Role, RoleId};
+use poise::serenity_prelude::{
+    CreateInteractionResponseFollowup, FullEvent, GatewayIntents, Interaction, MessageBuilder,
+    RoleId,
+};
 use poise::{serenity_prelude as serenity, ApplicationContext, FrameworkError};
 use poise::{Framework, FrameworkOptions};
 use serde::Deserialize;
@@ -29,9 +32,10 @@ pub struct Data {
     pub translator: Arc<Translator>,
 }
 
-
-pub static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"rr:(\d{18})").expect("ID_REGEX didn't compile"));
-pub static MIME_AUDIO_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"audio/.+").expect("MIME_AUDIO_REGEX didn't compile"));
+pub static ID_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"rr:(\d{18})").expect("ID_REGEX didn't compile"));
+pub static MIME_AUDIO_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"audio/.+").expect("MIME_AUDIO_REGEX didn't compile"));
 
 #[derive(Deserialize)]
 struct Config {
@@ -64,7 +68,7 @@ async fn main() -> Result<(), serenity::Error> {
             commands: vec![reaction_roles(), music()],
             event_handler: |ctx, event, _framework, _data| {
                 Box::pin(async move {
-                    if let FullEvent::InteractionCreate { interaction }  = event {
+                    if let FullEvent::InteractionCreate { interaction } = event {
                         handle_reaction_roles(ctx, interaction).await?;
                     }
                     Ok(())
@@ -73,7 +77,9 @@ async fn main() -> Result<(), serenity::Error> {
             on_error: |err| {
                 Box::pin(async move {
                     if let FrameworkError::Command { error, ctx, .. } = err {
-                        tracing::error!("error running command: {error:?} \n context for debugging: {ctx:?}");
+                        tracing::error!(
+                            "error running command: {error:?} \n context for debugging: {ctx:?}"
+                        );
                     }
                 })
             },
@@ -90,7 +96,13 @@ async fn main() -> Result<(), serenity::Error> {
         })
         .build();
 
-    let mut client = serenity::ClientBuilder::new(config.token, GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES).register_songbird().framework(framework).await?;
+    let mut client = serenity::ClientBuilder::new(
+        config.token,
+        GatewayIntents::non_privileged() | GatewayIntents::GUILD_VOICE_STATES,
+    )
+    .register_songbird()
+    .framework(framework)
+    .await?;
 
     client.start().await
 }
@@ -105,7 +117,7 @@ pub fn local_get(translator: &Translator, key: &str, locale: &str) -> String {
     translator.get(key, locale).unwrap_or_else(|_| {
         translator
             .get(key, "en-US")
-            .unwrap_or_else(|_| panic!("key {} doesn't exist", key))
+            .unwrap_or_else(|_| panic!("key {key} doesn't exist"))
     })
 }
 
@@ -122,25 +134,33 @@ async fn handle_reaction_roles(
                     if member.roles.iter().any(|r| r == &role_id) {
                         member.remove_role(&ctx, &role_id).await?;
                         component
-                            .create_followup(&ctx, CreateInteractionResponseFollowup::new().ephemeral(true).content(
-                                    MessageBuilder::new()
-                                        .push("you no longer have the ")
-                                        .role(role_id)
-                                        .push(" role")
-                                        .build()
-                            ))
+                            .create_followup(
+                                &ctx,
+                                CreateInteractionResponseFollowup::new()
+                                    .ephemeral(true)
+                                    .content(
+                                        MessageBuilder::new()
+                                            .push("you no longer have the ")
+                                            .role(role_id)
+                                            .push(" role")
+                                            .build(),
+                                    ),
+                            )
                             .await?;
                     } else {
                         member.add_role(&ctx, &role_id).await?;
                         component
-                            .create_followup(&ctx, CreateInteractionResponseFollowup::new().
-                                ephemeral(true).content(
-                                    MessageBuilder::new()
-                                        .push("you got the ")
-                                        .role(role_id)
-                                        .push(" role")
-                                        .build()
-                                )
+                            .create_followup(
+                                &ctx,
+                                CreateInteractionResponseFollowup::new()
+                                    .ephemeral(true)
+                                    .content(
+                                        MessageBuilder::new()
+                                            .push("you got the ")
+                                            .role(role_id)
+                                            .push(" role")
+                                            .build(),
+                                    ),
                             )
                             .await?;
                     }

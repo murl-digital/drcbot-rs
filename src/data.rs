@@ -53,14 +53,12 @@ impl Database {
         let collection = db.collection("reactionRolesIndices");
 
         collection
-            .insert_one(
-                ReactionRolesIndex {
-                    guild_id,
-                    channel_id,
-                    message_id,
-                    messages: vec![],
-                },
-            )
+            .insert_one(ReactionRolesIndex {
+                guild_id,
+                channel_id,
+                message_id,
+                messages: vec![],
+            })
             .await
     }
 

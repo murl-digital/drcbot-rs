@@ -1,6 +1,8 @@
 use crate::commands::reaction_roles::update_index;
 use crate::{local_get, Context, Error};
-use poise::serenity_prelude::{CreateEmbed, CreateEmbedFooter, CreateMessage, GuildChannel, Message};
+use poise::serenity_prelude::{
+    CreateEmbed, CreateEmbedFooter, CreateMessage, GuildChannel, Message,
+};
 use poise::{send_application_reply, CreateReply, Modal};
 
 #[poise::command(slash_command, subcommands("init", "add", "list", "remove"))]
@@ -31,12 +33,15 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
         .await?
         .is_some()
     {
-        send_application_reply(ctx, CreateReply::default().content(local_get(
-                &ctx.data.translator,
-                "commands_reactionroles_init_exists",
-                locale,
-            ))
-            .ephemeral(true)
+        send_application_reply(
+            ctx,
+            CreateReply::default()
+                .content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_init_exists",
+                    locale,
+                ))
+                .ephemeral(true),
         )
         .await?;
 
@@ -44,10 +49,14 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
     }
 
     let message = channel
-        .send_message(ctx.serenity_context, CreateMessage::default().add_embed(CreateEmbed::default().title("Reaction Roles Index")
+        .send_message(
+            ctx.serenity_context,
+            CreateMessage::default().add_embed(
+                CreateEmbed::default()
+                    .title("Reaction Roles Index")
                     .description("Click a link to get sent to the associated category")
-                    .timestamp(chrono::Utc::now())
-            )
+                    .timestamp(chrono::Utc::now()),
+            ),
         )
         .await?;
 
@@ -56,12 +65,15 @@ async fn init(ctx: Context<'_>, channel: GuildChannel) -> Result<(), Error> {
         .save_index(channel.guild_id, channel.id, message.id)
         .await?;
 
-    send_application_reply(ctx, CreateReply::default().content(local_get(
-            &ctx.data.translator,
-            "commands_reactionroles_init_success",
-            locale,
-        ))
-        .ephemeral(true)
+    send_application_reply(
+        ctx,
+        CreateReply::default()
+            .content(local_get(
+                &ctx.data.translator,
+                "commands_reactionroles_init_success",
+                locale,
+            ))
+            .ephemeral(true),
     )
     .await?;
 
@@ -75,15 +87,21 @@ async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<
         .expect("locale should always be available for slash commands");
     if let Some(mut index) = ctx.data.database.get_index(&channel.guild_id).await? {
         if let Some(message_data) = MessageCreate::execute(ctx).await? {
-            let mut embed = CreateEmbed::default().title(message_data.title.clone())
+            let mut embed = CreateEmbed::default()
+                .title(message_data.title.clone())
                 .description(message_data.description);
 
-                if infocard {
-                    embed = embed.footer(CreateEmbedFooter::new("Click one of the buttons to get (or lose) a role"));
-                }
+            if infocard {
+                embed = embed.footer(CreateEmbedFooter::new(
+                    "Click one of the buttons to get (or lose) a role",
+                ));
+            }
 
             let message = channel
-                .send_message(ctx.serenity_context, CreateMessage::default().add_embed(embed))
+                .send_message(
+                    ctx.serenity_context,
+                    CreateMessage::default().add_embed(embed),
+                )
                 .await?;
 
             index.messages.push(crate::data::ReactionRolesMessage {
@@ -96,21 +114,26 @@ async fn add(ctx: Context<'_>, channel: GuildChannel, infocard: bool) -> Result<
 
             update_index(&ctx, &index).await?;
 
-            send_application_reply(ctx, CreateReply::default().content(local_get(
+            send_application_reply(
+                ctx,
+                CreateReply::default().content(local_get(
                     &ctx.data.translator,
                     "commands_reactionroles_add_success",
                     locale,
-                ))
+                )),
             )
             .await?;
         }
     } else {
-        send_application_reply(ctx, CreateReply::default().content(local_get(
-                &ctx.data.translator,
-                "commands_reactionroles_add_noindex",
-                locale,
-            ))
-            .ephemeral(true)
+        send_application_reply(
+            ctx,
+            CreateReply::default()
+                .content(local_get(
+                    &ctx.data.translator,
+                    "commands_reactionroles_add_noindex",
+                    locale,
+                ))
+                .ephemeral(true),
         )
         .await?;
     }
@@ -135,21 +158,26 @@ async fn remove(ctx: Context<'_>, message: Message) -> Result<(), Error> {
 
                 update_index(&ctx, &index).await?;
 
-                send_application_reply(ctx, CreateReply::default().content(local_get(
+                send_application_reply(
+                    ctx,
+                    CreateReply::default().content(local_get(
                         &ctx.data.translator,
                         "commands_reactionroles_remove_success",
                         locale,
-                    ))
+                    )),
                 )
                 .await?;
             }
         } else {
-            send_application_reply(ctx, CreateReply::default().content(local_get(
-                    &ctx.data.translator,
-                    "commands_reactionroles_remove_noindex",
-                    locale,
-                ))
-                .ephemeral(true)
+            send_application_reply(
+                ctx,
+                CreateReply::default()
+                    .content(local_get(
+                        &ctx.data.translator,
+                        "commands_reactionroles_remove_noindex",
+                        locale,
+                    ))
+                    .ephemeral(true),
             )
             .await?;
         }
@@ -166,28 +194,30 @@ async fn list(ctx: Context<'_>) -> Result<(), Error> {
         .get_index(&ctx.guild_id().expect("we should be in a guild right now"))
         .await?
     {
-        send_application_reply(ctx, CreateReply::default().embed(CreateEmbed::default().field(
-                    "Index",
-                    format!(
-                        "https://discord.com/channels/{}/{}/{}",
-                        index.guild_id,
-                        index.channel_id,
-                        index.message_id
-                    ),
-                    false,
-                ).fields(index.messages.iter().map(|m| {
-                    (
-                        &m.title,
+        send_application_reply(
+            ctx,
+            CreateReply::default().embed(
+                CreateEmbed::default()
+                    .field(
+                        "Index",
                         format!(
                             "https://discord.com/channels/{}/{}/{}",
-                            index.guild_id,
-                            m.channel_id,
-                            m.message_id
+                            index.guild_id, index.channel_id, index.message_id
                         ),
-                        true,
+                        false,
                     )
-                }))
-        ))
+                    .fields(index.messages.iter().map(|m| {
+                        (
+                            &m.title,
+                            format!(
+                                "https://discord.com/channels/{}/{}/{}",
+                                index.guild_id, m.channel_id, m.message_id
+                            ),
+                            true,
+                        )
+                    })),
+            ),
+        )
         .await?;
     }
 

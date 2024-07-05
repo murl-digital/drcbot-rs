@@ -1,4 +1,6 @@
-use poise::serenity_prelude::{CreateEmbed, EditMessage, EmbedMessageBuilding, MessageBuilder, ReactionType};
+use poise::serenity_prelude::{
+    CreateEmbed, EditMessage, EmbedMessageBuilding, MessageBuilder, ReactionType,
+};
 
 use crate::commands::reaction_roles::messages::messages;
 use crate::commands::reaction_roles::roles::roles;
@@ -36,28 +38,26 @@ async fn update_index(
         .await?;
 
     let mut embed = CreateEmbed::default()
-    .title("Reaction Roles Index")
+        .title("Reaction Roles Index")
         .description("Click a link to get sent to the associated category")
         .timestamp(chrono::Utc::now());
 
-        let mut field_value = MessageBuilder::new();
-        for link in index.messages.iter().map(|rm| {
-            MessageBuilder::new()
-                .push_named_link(
-                    rm.title.clone(),
-                    format!(
-                        "https://discord.com/channels/{}/{}/{}",
-                        index.guild_id,
-                        rm.channel_id,
-                        rm.message_id
-                    ),
-                )
-                .build()
-        }) {
-            field_value.push_quote_line(link);
-        }
+    let mut field_value = MessageBuilder::new();
+    for link in index.messages.iter().map(|rm| {
+        MessageBuilder::new()
+            .push_named_link(
+                rm.title.clone(),
+                format!(
+                    "https://discord.com/channels/{}/{}/{}",
+                    index.guild_id, rm.channel_id, rm.message_id
+                ),
+            )
+            .build()
+    }) {
+        field_value.push_quote_line(link);
+    }
 
-        embed = embed.field("Links", field_value.build(), false);
+    embed = embed.field("Links", field_value.build(), false);
 
     index_message
         .edit(ctx.serenity_context, EditMessage::default().embed(embed))
