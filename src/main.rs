@@ -140,7 +140,7 @@ async fn handle_reaction_roles(
     interaction: &Interaction,
 ) -> Result<(), Error> {
     if let Some(mut component) = interaction.clone().message_component() {
-        component.defer(&ctx.http).await?;
+        component.defer(&ctx).await?;
 
         if let Some(captures) = ID_REGEX.captures(&component.data.custom_id) {
             if let Ok(role_id) = captures[1].parse::<RoleId>() {

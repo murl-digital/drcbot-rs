@@ -17,7 +17,7 @@ poise = "0.6"
 chrono = "0.4"
 itertools = "0.13"
 regex = "1"
-songbird = {version = "0.4", features = ["builtin-queue"]}
+songbird = { version = "0.4", features = ["builtin-queue"] }
 url = "2"
 rgb = "0.8"
 
@@ -28,3 +28,6 @@ symphonia = { version = "0.5", features = ["all", "opt-simd"] }
 tracing-journald = "0.3.0"
 anyhow = "1.0.86"
 thiserror = "1.0.61"
+
+[patch."crates-io"]
+songbird = { git = "https://github.com/Erk-/songbird", rev = "7a7e6951b1a4e20e2e25e2dd9db2308769b320cf" }
