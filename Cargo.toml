@@ -30,4 +30,4 @@ anyhow = "1.0.86"
 thiserror = "1.0.61"
 
 [patch."crates-io"]
-songbird = { git = "https://github.com/Erk-/songbird", rev = "7a7e6951b1a4e20e2e25e2dd9db2308769b320cf" }
+songbird = { git = "https://github.com/serenity-rs/songbird", rev = "8e92c49b2b88f5a23faa27a5ff5e2c0cdfa700c1" }

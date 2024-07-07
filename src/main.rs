@@ -8,17 +8,16 @@ use locale::Translator;
 use mongodb::Client;
 use poise::builtins::register_globally;
 use poise::serenity_prelude::{
-    CreateInteractionResponseFollowup, FullEvent, GatewayIntents, Interaction, MessageBuilder,
-    RoleId,
+    CreateInteractionResponseFollowup, FullEvent, GatewayIntents, Interaction, Mentionable, RoleId,
 };
 use poise::{serenity_prelude as serenity, ApplicationContext, FrameworkError};
 use poise::{Framework, FrameworkOptions};
 use serde::Deserialize;
 use songbird::SerenityInit;
+use std::sync::{Arc, LazyLock};
 use thiserror::Error;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use std::sync::{Arc, LazyLock};
 
 pub type Context<'a> = ApplicationContext<'a, Data, Error>;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -58,16 +57,21 @@ enum StartupError {
     #[error("problem initializing translator: {0}")]
     InitTranslator(locale::InitError),
     #[error("problem connecting to database: {0}")]
-    Database(mongodb::error::Error)
+    Database(mongodb::error::Error),
 }
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    tracing_subscriber::registry().with(tracing_journald::layer().map_err(StartupError::JournaldConnection)?).init();
+    tracing_subscriber::registry()
+        .with(tracing_journald::layer().map_err(StartupError::JournaldConnection)?)
+        .init();
 
     let config: Config = toml::from_str(
-        &tokio::fs::read_to_string("config.toml").await.map_err(StartupError::ReadConfig)?
-    ).map_err(StartupError::ParseConfig)?;
+        &tokio::fs::read_to_string("config.toml")
+            .await
+            .map_err(StartupError::ReadConfig)?,
+    )
+    .map_err(StartupError::ParseConfig)?;
 
     let translator = Translator::new("locale.toml")
         .await
@@ -144,21 +148,18 @@ async fn handle_reaction_roles(
 
         if let Some(captures) = ID_REGEX.captures(&component.data.custom_id) {
             if let Ok(role_id) = captures[1].parse::<RoleId>() {
+                let role = role_id.mention();
                 if let Some(ref mut member) = component.member {
-                    if member.roles.iter().any(|r| r == &role_id) {
+                    member.roles.sort_unstable();
+
+                    if member.roles.binary_search(&role_id).is_ok() {
                         member.remove_role(&ctx, &role_id).await?;
                         component
                             .create_followup(
                                 &ctx,
                                 CreateInteractionResponseFollowup::new()
                                     .ephemeral(true)
-                                    .content(
-                                        MessageBuilder::new()
-                                            .push("you no longer have the ")
-                                            .role(role_id)
-                                            .push(" role")
-                                            .build(),
-                                    ),
+                                    .content(format!("you no longer have the {role} role")),
                             )
                             .await?;
                     } else {
@@ -168,13 +169,7 @@ async fn handle_reaction_roles(
                                 &ctx,
                                 CreateInteractionResponseFollowup::new()
                                     .ephemeral(true)
-                                    .content(
-                                        MessageBuilder::new()
-                                            .push("you got the ")
-                                            .role(role_id)
-                                            .push(" role")
-                                            .build(),
-                                    ),
+                                    .content(format!("you got the {role} role")),
                             )
                             .await?;
                     }

@@ -1,8 +1,7 @@
-use core::error;
 use std::collections::HashMap;
 
-use thiserror::Error;
 use serde::Deserialize;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub struct Translator {
